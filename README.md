@@ -33,6 +33,10 @@ results with Camofox (or CloakBrowser if the site is protected).
   subscriptions, no rate limits. Everything runs on your machine,
   Docker and npm. Unlimited usage, zero cost.
 
+- **Lightweight, runs anywhere.** Built and tested on a Raspberry Pi
+  — if it runs there, it runs everywhere. Minimal resource consumption,
+  no heavy infrastructure needed, runs 24/7 on low-power hardware.
+
 - **Search + browse in one kit.** No manual integration needed.
   Searching and browsing are two distinct phases, both covered.
 
