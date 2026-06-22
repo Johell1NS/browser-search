@@ -24,10 +24,6 @@ and ready-to-use integration:
 2. **[Camofox](https://github.com/jo-inc/camofox-browser)** — browser navigable via REST API for standard sites
 3. **[CloakBrowser](https://github.com/cloakhq/cloakbrowser)** — stealth browser for anti-bot protected sites
 
-This is not just a list of repos: a skill coordinates the three tools,
-with automation scripts, challenge detection for Cloudflare and others,
-integrated Readability.js, automated setup, and health checks.
-
 The typical flow: the agent first searches with SearXNG, then browses the
 results with Camofox (or CloakBrowser if the site is protected).
 
