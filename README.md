@@ -15,11 +15,6 @@ and other anti-bot systems block simple requests. Modern sites use heavy
 JavaScript, lazy loading, and client-side rendering. One single solution
 is not enough.
 
-The problem? The web is hostile to automation. Cloudflare, Akamai, DataDome
-and other anti-bot systems block simple requests. Modern sites use heavy
-JavaScript, lazy loading, and client-side rendering. One single solution
-is not enough.
-
 `browser-search` orchestrates **three open source tools** into a single
 search and browsing system designed for AI agents. Each tool has its role,
 orchestrated by the skill with escalation logic, automatic selection,
