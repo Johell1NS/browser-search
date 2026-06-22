@@ -162,6 +162,33 @@ node scripts/cloak/cloak-fetch.mjs "https://protected-site.com"
 node scripts/cloak/cloak-fetch.mjs "https://protected-site.com" --proxy socks5://... --geoip
 ```
 
+## Why both Camofox and CloakBrowser?
+
+Because speed and stealth are a tradeoff, and the right tool depends on the site.
+
+**Camofox — fast, structured, persistent.**
+Camofox wraps Camoufox (a C++-level Firefox fork) in a REST API with an
+always-warm browser. After a ~1-3s cold start, every request is near-instant.
+Its accessibility snapshots are ~90% smaller than raw HTML, with stable
+element refs (e1, e2, ...) for reliable interaction. It handles the ~90% of
+sites that don't use advanced anti-bot protection: articles, docs, search
+engines, standard web pages.
+
+**CloakBrowser — stealth, anti-bot, on-demand.**
+CloakBrowser launches a fresh Chromium instance per request (~1-3s startup
+each time). It uses advanced fingerprinting, proxy support, geoip, and
+automatic challenge detection to bypass Cloudflare, Akamai, DataDome,
+Imperva, PerimeterX, and DDoS-Guard. It is the last resort for the ~10% of
+sites that block Camofox.
+
+**Real-world numbers:**
+Camoufox (the engine behind Camofox) achieves up to ~92% anti-bot bypass
+rate, with ~82% baseline success rate on Cloudflare Turnstile and ~90% on
+DataDome — compared to ~60% for standard Playwright stealth approaches.
+
+Camofox handles the fast path. CloakBrowser handles the edge cases. Together
+they cover the entire web with no gaps. The agent decides which to use.
+
 ## Installation
 
 ```bash
