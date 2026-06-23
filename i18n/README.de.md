@@ -1,7 +1,7 @@
 # browser-search
 
 <p align="center">
-  <img src="../img/logoSmall-browser-search.png" alt="browser-search logo" width="80%">
+  <img src="../img/logoLarge-browser-search.png" alt="browser-search logo" width="80%">
 </p>
 
 > **Eine Skill für KI-Agenten.** OpenCode, Claude Code, Cursor, OpenClaw und mehr. Durchsuchen Sie das Web mit SearXNG, browsen Sie mit Camofox, umgehen Sie Schutzmaßnahmen mit CloakBrowser. Alles selbst gehostet, kostenlos, unbegrenzt.
