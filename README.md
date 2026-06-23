@@ -70,6 +70,16 @@ results with Camofox (or CloakBrowser if the site is protected).
   package.json, everything works everywhere. Just ask your agent
   how to convert the skill for its environment.
 
+## 🏆 State of the art
+
+These three tools were chosen because they represent the current
+state of the art available today. A skill like this is designed
+to evolve: when better tools emerge, updating the SKILL.md is
+all it takes to swap them in. 🔄
+
+⭐ **Star the repo and follow** to stay up to date on new tools,
+flow improvements, and orchestration updates over time. 🚀
+
 ## Architecture
 
 ```

@@ -38,6 +38,12 @@ El flujo típico: el agente primero busca con SearXNG, luego navega los resultad
 
 - **Funciona con cualquier agente.** La SKILL.md está escrita para OpenCode, pero la lógica es idéntica para cualquier agente de IA. El mismo README, el mismo package.json, todo funciona en todas partes. Solo dile a tu agente que convierta la skill para su entorno.
 
+## 🏆 Estado del arte
+
+Estas tres herramientas fueron elegidas porque representan el estado del arte actual disponible hoy. Una skill como esta está diseñada para evolucionar: cuando surjan mejores herramientas, basta con actualizar la SKILL.md para reemplazarlas. 🔄
+
+⭐ **Marca la estrella del repo y sigue** para mantenerte al día sobre nuevas herramientas, mejoras del flujo y actualizaciones de la orquestación. 🚀
+
 ## Arquitectura
 
 ```

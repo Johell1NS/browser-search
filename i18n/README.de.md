@@ -38,6 +38,12 @@ Der typische Ablauf: Der Agent sucht zuerst mit SearXNG, dann durchsucht er die 
 
 - **Funktioniert mit jedem Agenten.** Die SKILL.md ist für OpenCode geschrieben, aber die Logik ist für jeden KI-Agenten identisch. Gleiches README, gleiches package.json, alles funktioniert überall. Bitten Sie einfach Ihren Agenten, die Skill für seine Umgebung zu konvertieren.
 
+## 🏆 Stand der Technik
+
+Diese drei Werkzeuge wurden ausgewählt, weil sie den aktuellen Stand der Technik repräsentieren. Eine solche Skill ist darauf ausgelegt, sich weiterzuentwickeln: wenn bessere Werkzeuge auftauchen, reicht ein Update der SKILL.md, um sie auszutauschen. 🔄
+
+⭐ **Gib dem Repository einen Stern und folge ihm**, um über neue Tools, Verbesserungen des Ablaufs und Orchestrierungs-Updates auf dem Laufenden zu bleiben. 🚀
+
 ## Architektur
 
 ```
