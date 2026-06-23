@@ -1,5 +1,9 @@
 # browser-search
 
+<p align="center">
+  <img src="../img/logoSmall-browser-search.png" alt="browser-search logo" width="80%">
+</p>
+
 > **Навык для ИИ-агентов.** OpenCode, Claude Code, Cursor, OpenClaw и другие. Ищите в интернете с SearXNG, просматривайте сайты с Camofox, обходите защиту с CloakBrowser. Всё самостоятельно размещённое, бесплатное, без ограничений.
 
 ## Зачем это нужно

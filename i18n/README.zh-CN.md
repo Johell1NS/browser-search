@@ -1,5 +1,9 @@
 # browser-search
 
+<p align="center">
+  <img src="../img/logoSmall-browser-search.png" alt="browser-search logo" width="80%">
+</p>
+
 > **面向AI代理的技能。** 适用于OpenCode、Claude Code、Cursor、OpenClaw等。使用SearXNG搜索网页，使用Camofox浏览网页，使用CloakBrowser绕过防护。全部自托管、免费、无限制。
 
 ## 为什么存在

@@ -1,5 +1,9 @@
 # بحث-المتصفح
 
+<p align="center">
+  <img src="../img/logoSmall-browser-search.png" alt="browser-search logo" width="80%">
+</p>
+
 > **مهارة لوكلاء الذكاء الاصطناعي.** OpenCode، Claude Code، Cursor، OpenClaw وغيرهم. ابحث في الويب باستخدام SearXNG، تصفح باستخدام Camofox، تجاوز الحماية باستخدام CloakBrowser. كل شيء مستضاف ذاتياً، مجاني، غير محدود.
 
 ## لماذا هي موجودة

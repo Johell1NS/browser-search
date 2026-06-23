@@ -1,5 +1,9 @@
 # browser-search
 
+<p align="center">
+  <img src="../img/logoSmall-browser-search.png" alt="browser-search logo" width="80%">
+</p>
+
 > **AIエージェントのためのスキル。** OpenCode、Claude Code、Cursor、OpenClawなど。SearXNGでウェブ検索、Camofoxでブラウジング、CloakBrowserで保護をバイパス。すべてセルフホスト、無料、無制限。
 
 ## なぜ存在するのか

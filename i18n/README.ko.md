@@ -1,5 +1,9 @@
 # browser-search
 
+<p align="center">
+  <img src="../img/logoSmall-browser-search.png" alt="browser-search logo" width="80%">
+</p>
+
 > **AI 에이전트를 위한 스킬.** OpenCode, Claude Code, Cursor, OpenClaw 등. SearXNG로 웹 검색, Camofox로 브라우징, CloakBrowser로 보호 우회. 모두 셀프호스팅, 무료, 무제한.
 
 ## 왜 필요한가

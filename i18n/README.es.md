@@ -1,5 +1,9 @@
 # browser-search
 
+<p align="center">
+  <img src="../img/logoSmall-browser-search.png" alt="browser-search logo" width="80%">
+</p>
+
 > **Una skill para agentes de IA.** OpenCode, Claude Code, Cursor, OpenClaw y más. Busca en la web con SearXNG, navega con Camofox, evade protecciones con CloakBrowser. Todo autoalojado, gratuito, sin límites.
 
 ## Por qué existe

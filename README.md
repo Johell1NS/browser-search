@@ -1,7 +1,7 @@
 # browser-search
 
 <p align="center">
-  <img src="img/logoMedium-browser-search.png" alt="browser-search logo" width="80%">
+  <img src="img/logoSmall-browser-search.png" alt="browser-search logo" width="80%">
 </p>
 
 > **A skill for AI agents.** OpenCode, Claude Code, Cursor, OpenClaw and
