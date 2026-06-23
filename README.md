@@ -235,6 +235,10 @@ tailored to your environment and platform.
 | `scripts/check-browser-search.sh` | Post-installation verification |
 | `docker/setup.md` | Docker setup tips |
 
+**Note:** `SKILL.md` is written for **OpenCode** syntax (`exec`, `curl`).
+If your agent uses a different format (Claude Code, Cursor, etc.), read it
+and convert the commands to your agent's syntax before using the skill.
+
 ## Environment variables
 
 | Variable             | Required for                      | Default |
