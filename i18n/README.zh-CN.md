@@ -4,7 +4,7 @@
   <img src="../img/logoLarge-browser-search.png" alt="browser-search logo" width="80%">
 </p>
 
-> **面向AI代理的技能。** 适用于OpenCode、Claude Code、Cursor、OpenClaw等。使用SearXNG搜索网页，使用Camofox浏览网页，使用CloakBrowser绕过防护。全部自托管、免费、无限制。
+> **面向AI代理的技能。** 适用于OpenCode、Claude Code、Cursor、OpenClaw等。使用SearXNG搜索网页，使用Camofox浏览网页，使用CloakBrowser绕过防护。**抗幻觉设计。** 全部自托管、免费、无限制。
 
 ## 为什么存在
 
@@ -34,7 +34,7 @@ browser-search是一项技能——一套为OpenCode、Claude Code、Cursor、Op
 
 - **自动代理选择。** AI代理决定使用哪个工具：SearXNG用于初始搜索，Camofox用于浏览，CloakBrowser用于受保护的网站。无需人工干预。
 
-- **深度研究模式。** 该技能指导代理超越肤浅的答案：探索多个角度，交叉验证来源，覆盖每个方面，绝不偷工减料。
+- **抗幻觉设计。** 该技能的深度研究模式强制执行"先搜索，后回答"的工作流程：代理必须根据实时网络来源验证每个事实主张，交叉引用多个来源，绝不猜测。不再有编造的答案。
 
 - **完全可定制。** SKILL.md是纯文本。你可以编辑核心规则，添加自己的规则，删除不需要的内容。根据你的工作流程、你的团队、你的标准进行调整。
 

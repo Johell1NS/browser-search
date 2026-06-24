@@ -4,7 +4,7 @@
   <img src="../img/logoLarge-browser-search.png" alt="browser-search logo" width="80%">
 </p>
 
-> **Eine Skill für KI-Agenten.** OpenCode, Claude Code, Cursor, OpenClaw und mehr. Durchsuchen Sie das Web mit SearXNG, browsen Sie mit Camofox, umgehen Sie Schutzmaßnahmen mit CloakBrowser. Alles selbst gehostet, kostenlos, unbegrenzt.
+> **Eine Skill für KI-Agenten.** OpenCode, Claude Code, Cursor, OpenClaw und mehr. Durchsuchen Sie das Web mit SearXNG, browsen Sie mit Camofox, umgehen Sie Schutzmaßnahmen mit CloakBrowser. **Anti-Halluzination durch Design.** Alles selbst gehostet, kostenlos, unbegrenzt.
 
 ## Warum es existiert
 
@@ -34,7 +34,7 @@ Der typische Ablauf: Der Agent sucht zuerst mit SearXNG, dann durchsucht er die 
 
 - **Automatische Agentenauswahl.** Der KI-Agent entscheidet, welches Tool verwendet wird: SearXNG für die erste Suche, Camofox zum Browsen, CloakBrowser wenn die Website geschützt ist. Kein menschliches Eingreifen.
 
-- **Tiefenrecherche-Modus.** Die Skill weist den Agenten an, über oberflächliche Antworten hinauszugehen: mehrere Blickwinkel erkunden, Quellen kreuzweise verifizieren, jeden Aspekt abdecken und niemals Abkürzungen nehmen.
+- **Anti-Halluzination durch Design.** Der Tiefenrecherche-Modus der Skill erzwingt einen "erst suchen, dann antworten"-Workflow: der Agent muss jede Tatsachenbehauptung anhand von Live-Webquellen überprüfen, mehrere Quellen kreuzreferenzieren und niemals raten. Keine erfundenen Antworten mehr.
 
 - **Vollständig anpassbar.** Die SKILL.md ist reiner Text. Sie können die Kernregeln bearbeiten, eigene hinzufügen, entfernen was Sie nicht brauchen. Passen Sie sie an Ihren Workflow, Ihr Team, Ihre Standards an.
 

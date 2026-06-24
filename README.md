@@ -6,7 +6,8 @@
 
 > **A skill for AI agents.** OpenCode, Claude Code, Cursor, OpenClaw and
 > beyond. Search the web with SearXNG, browse with Camofox, bypass
-> protections with CloakBrowser. All self-hosted, free, unlimited.
+> protections with CloakBrowser. **Anti-hallucination by design.**
+> All self-hosted, free, unlimited.
 
 <p align="center"><b>English</b> · <a href="i18n/README.zh-CN.md">简体中文</a> · <a href="i18n/README.es.md">Español</a> · <a href="i18n/README.ja.md">日本語</a> · <a href="i18n/README.ko.md">한국어</a> · <a href="i18n/README.pt-BR.md">Português (Brasil)</a> · <a href="i18n/README.fr.md">Français</a> · <a href="i18n/README.de.md">Deutsch</a> · <a href="i18n/README.ru.md">Русский</a> · <a href="i18n/README.ar.md">العربية</a> · <a href="i18n/README.it.md">Italiano</a></p>
 
@@ -57,9 +58,10 @@ results with Camofox (or CloakBrowser if the site is protected).
   SearXNG for initial search, Camofox for browsing, CloakBrowser if
   the site is protected. Zero human intervention.
 
-- **Deep Research mode.** The skill instructs the agent to go beyond
-  superficial answers: explore multiple angles, cross-verify sources,
-  cover every aspect, and never cut corners.
+- **Anti-hallucination by design.** The skill's Deep Research mode enforces a
+  "search first, answer second" workflow: the agent must verify every factual
+  claim against live web sources, cross-reference multiple angles, and never
+  guess. No more made-up answers.
 
 - **Fully customizable.** The SKILL.md is plain text. You can edit the
   core rules, add your own, remove what you don't need. Adapt it to

@@ -4,7 +4,7 @@
   <img src="../img/logoLarge-browser-search.png" alt="browser-search logo" width="80%">
 </p>
 
-> **Une skill pour les agents IA.** OpenCode, Claude Code, Cursor, OpenClaw et bien d'autres. Recherchez sur le web avec SearXNG, naviguez avec Camofox, contournez les protections avec CloakBrowser. Le tout auto-hébergé, gratuit, illimité.
+> **Une skill pour les agents IA.** OpenCode, Claude Code, Cursor, OpenClaw et bien d'autres. Recherchez sur le web avec SearXNG, naviguez avec Camofox, contournez les protections avec CloakBrowser. **Anti-hallucination par conception.** Le tout auto-hébergé, gratuit, illimité.
 
 ## Pourquoi ça existe
 
@@ -34,7 +34,7 @@ Le flux typique : l'agent recherche d'abord avec SearXNG, puis navigue dans les 
 
 - **Choix automatique de l'agent.** L'agent IA décide quel outil utiliser : SearXNG pour la recherche initiale, Camofox pour la navigation, CloakBrowser si le site est protégé. Intervention humaine zéro.
 
-- **Mode de recherche approfondie.** La skill ordonne à l'agent d'aller au-delà des réponses superficielles : explorer plusieurs angles, vérifier les sources de manière croisée, couvrir tous les aspects et ne jamais prendre de raccourcis.
+- **Anti-hallucination par conception.** Le mode de recherche approfondie de la skill impose un flux "cherche d'abord, réponds ensuite" : l'agent doit vérifier chaque affirmation factuelle contre des sources web en direct, recouper plusieurs sources et ne jamais deviner. Plus de réponses inventées.
 
 - **Entièrement personnalisable.** Le SKILL.md est en texte brut. Vous pouvez modifier les règles principales, ajouter les vôtres, supprimer ce dont vous n'avez pas besoin. Adaptez-le à votre flux de travail, votre équipe, vos standards.
 
