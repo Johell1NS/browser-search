@@ -1,4 +1,7 @@
-# Skill: browser-search
+---
+name: "browser-search"
+description: "Multi-engine web search (SearXNG) + browsing/scraping (Camofox, CloakBrowser). Use whenever you need to do web research."
+---
 
 # Browser Search
 
