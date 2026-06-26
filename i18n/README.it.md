@@ -173,8 +173,20 @@ Camofox gestisce il percorso veloce. CloakBrowser gestisce i casi limite. Insiem
 
 ## Installazione
 
+### Installazione rapida (solo SKILL.md)
+
+Installa la definizione della skill nel tuo agente AI con un solo comando:
+
 ```bash
-git clone https://github.com/johell1ns/browser-search
+npx skills add Johell1NS/browser-search
+```
+
+Funziona con oltre 70 agenti AI tra cui OpenCode, Claude Code, Cursor, GitHub Copilot e altri.
+
+### Installazione completa (con infrastruttura)
+
+```bash
+git clone https://github.com/Johell1NS/browser-search
 cd browser-search
 npm install
 ```

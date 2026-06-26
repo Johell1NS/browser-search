@@ -230,14 +230,25 @@ they cover the entire web with no gaps. The agent decides which to use.
 
 ## Installation
 
+### Quick install (SKILL.md only)
+
+Install the skill definition into your AI agent with a single command:
+
 ```bash
-git clone https://github.com/johell1ns/browser-search
+npx skills add Johell1NS/browser-search
+```
+
+This works with 70+ AI agents including OpenCode, Claude Code, Cursor, GitHub Copilot, and more.
+
+### Full setup (with infrastructure)
+
+```bash
+git clone https://github.com/Johell1NS/browser-search
 cd browser-search
 npm install
 ```
 
-Show this README to your AI agent for a complete installation
-tailored to your environment and platform.
+Show this README to your AI agent for a complete installation tailored to your environment and platform.
 
 **Services overview:**
 

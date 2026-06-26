@@ -173,8 +173,20 @@ Camofox는 빠른 경로를 처리합니다. CloakBrowser는 엣지 케이스를
 
 ## 설치
 
+### 빠른 설치 (SKILL.md만)
+
+단일 명령으로 AI 에이전트에 스킬 정의를 설치하세요:
+
 ```bash
-git clone https://github.com/johell1ns/browser-search
+npx skills add Johell1NS/browser-search
+```
+
+OpenCode, Claude Code, Cursor, GitHub Copilot 등 70개 이상의 AI 에이전트에서 작동합니다.
+
+### 전체 설정 (인프라 포함)
+
+```bash
+git clone https://github.com/Johell1NS/browser-search
 cd browser-search
 npm install
 ```

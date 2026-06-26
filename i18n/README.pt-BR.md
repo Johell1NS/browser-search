@@ -173,8 +173,20 @@ Camofox lida com o caminho rápido. CloakBrowser lida com os casos extremos. Jun
 
 ## Instalação
 
+### Instalação rápida (apenas SKILL.md)
+
+Instale a definição da skill no seu agente de IA com um único comando:
+
 ```bash
-git clone https://github.com/johell1ns/browser-search
+npx skills add Johell1NS/browser-search
+```
+
+Funciona com mais de 70 agentes de IA, incluindo OpenCode, Claude Code, Cursor, GitHub Copilot e outros.
+
+### Instalação completa (com infraestrutura)
+
+```bash
+git clone https://github.com/Johell1NS/browser-search
 cd browser-search
 npm install
 ```

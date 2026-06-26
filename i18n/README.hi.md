@@ -173,8 +173,20 @@ Camofox तेज़ पथ को संभालता है। CloakBrowser 
 
 ## स्थापना
 
+### त्वरित स्थापना (केवल SKILL.md)
+
+एक ही कमांड से अपने AI एजेंट में स्किल परिभाषा स्थापित करें:
+
 ```bash
-git clone https://github.com/johell1ns/browser-search
+npx skills add Johell1NS/browser-search
+```
+
+यह OpenCode, Claude Code, Cursor, GitHub Copilot और अन्य सहित 70+ AI एजेंटों के साथ काम करता है।
+
+### पूर्ण सेटअप (बुनियादी ढाँचे के साथ)
+
+```bash
+git clone https://github.com/Johell1NS/browser-search
 cd browser-search
 npm install
 ```
