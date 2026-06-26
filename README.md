@@ -1,6 +1,10 @@
 # browser-search
 
 <p align="center">
+  <a href="https://skills.sh/Johell1NS/browser-search"><img src="https://skills.sh/b/Johell1NS/browser-search" alt="skills.sh"></a>
+</p>
+
+<p align="center">
   <img src="img/logoLarge-browser-search.png" alt="browser-search logo" width="80%">
 </p>
 
