@@ -4,12 +4,11 @@
 // Follows the official CloakBrowser pattern: launch() + Playwright API.
 
 import { launch, launchPersistentContext } from 'cloakbrowser';
-import { resolve, dirname } from 'path';
+import { resolve, dirname, sep } from 'path';
 import { fileURLToPath } from 'url';
-import { sep } from 'path';
+import { realpath } from 'node:fs/promises';
 import { createSandbox } from './lib/sandbox.mjs';
 import { RateLimiter } from './lib/rate-limiter.mjs';
-import { validateUrlWithDns } from './lib/url-validation.mjs';
 
 // Skill directory for path validation (repo root)
 const SKILL_DIR = resolve(dirname(dirname(dirname(fileURLToPath(import.meta.url)))));
@@ -36,7 +35,7 @@ Launch options (same as cloak-fetch):
 
 Other:
   --version, --help
-  --unsafe            Bypass sandbox (full Node.js access — DANGEROUS)
+  --unsafe            Bypass sandbox (full Playwright API access — DANGEROUS)
   --verbose           Include stack traces in error output
   --no-rate-limit     Disable rate limiting (default: 30 req/min)
 
@@ -98,11 +97,17 @@ function parseArgs() {
 async function main() {
   const opts = parseArgs();
 
-  // Path traversal protection — script must be within skill directory
+  // Path traversal protection — resolve symlinks before checking
   if (!opts.unsafe) {
-    const scriptPath = opts.script;
-    if (scriptPath !== SKILL_DIR && !scriptPath.startsWith(SKILL_DIR + sep)) {
-      const err = new Error(`Script path must be within skill directory (${SKILL_DIR}). Got: ${scriptPath}`);
+    let realScriptPath;
+    try {
+      realScriptPath = await realpath(opts.script);
+    } catch {
+      // File doesn't exist yet — fall back to resolved path
+      realScriptPath = opts.script;
+    }
+    if (realScriptPath !== SKILL_DIR && !realScriptPath.startsWith(SKILL_DIR + sep)) {
+      const err = new Error(`Script path must be within skill directory (${SKILL_DIR}). Got: ${realScriptPath}`);
       process.stderr.write(JSON.stringify({ error: err.message }) + '\n');
       process.exit(1);
     }

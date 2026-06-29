@@ -10,16 +10,15 @@ const STATE_FILE = join(STATE_DIR, 'rate-state.json');
 
 /**
  * Rate limiter with file-based persistence across processes.
+ * Enforces per-minute request limits.
  */
 export class RateLimiter {
   /**
    * @param {Object} opts
    * @param {number} opts.maxPerMinute - Max requests per minute (default: 30)
-   * @param {number} opts.maxConcurrent - Max concurrent requests (default: 5)
    */
-  constructor({ maxPerMinute = 30, maxConcurrent = 5 } = {}) {
+  constructor({ maxPerMinute = 30 } = {}) {
     this.maxPerMinute = maxPerMinute;
-    this.maxConcurrent = maxConcurrent;
     this.stateFile = STATE_FILE;
   }
 
@@ -39,7 +38,7 @@ export class RateLimiter {
     } catch {
       // Corrupted or unreadable — start fresh
     }
-    return { requests: [], concurrent: 0 };
+    return { requests: [] };
   }
 
   _writeState(state) {

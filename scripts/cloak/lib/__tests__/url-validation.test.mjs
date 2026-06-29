@@ -1,7 +1,7 @@
 // URL validation tests — node:assert (zero dependencies)
 
 import assert from 'node:assert';
-import { validateUrl } from '../url-validation.mjs';
+import { validateUrl, validateUrlWithDns } from '../url-validation.mjs';
 
 let passed = 0;
 let failed = 0;
@@ -9,6 +9,17 @@ let failed = 0;
 function test(name, fn) {
   try {
     fn();
+    passed++;
+    process.stderr.write(`  ✅ ${name}\n`);
+  } catch (err) {
+    failed++;
+    process.stderr.write(`  ❌ ${name}: ${err.message}\n`);
+  }
+}
+
+async function testAsync(name, fn) {
+  try {
+    await fn();
     passed++;
     process.stderr.write(`  ✅ ${name}\n`);
   } catch (err) {
@@ -138,6 +149,52 @@ test('Blocked: invalid URL', () => {
   assert.ok(r.reason.includes('Invalid'));
 });
 
-// Summary
-process.stderr.write(`\nResults: ${passed} passed, ${failed} failed\n\n`);
-if (failed > 0) process.exit(1);
+// === Async DNS validation tests ===
+process.stderr.write('\n--- Async DNS Validation (validateUrlWithDns) ---\n\n');
+
+// Run async tests
+(async () => {
+  // Valid public URLs (DNS resolves to public IPs)
+  await testAsync('DNS Valid: https://example.com', async () => {
+    const r = await validateUrlWithDns('https://example.com');
+    assert.strictEqual(r.valid, true);
+  });
+
+  // Blocked: sync checks still work (no DNS needed)
+  await testAsync('DNS Blocked: localhost', async () => {
+    const r = await validateUrlWithDns('http://localhost:8080');
+    assert.strictEqual(r.valid, false);
+  });
+
+  await testAsync('DNS Blocked: 127.0.0.1', async () => {
+    const r = await validateUrlWithDns('http://127.0.0.1:22');
+    assert.strictEqual(r.valid, false);
+  });
+
+  await testAsync('DNS Blocked: 10.0.0.1', async () => {
+    const r = await validateUrlWithDns('http://10.0.0.1');
+    assert.strictEqual(r.valid, false);
+  });
+
+  await testAsync('DNS Blocked: 169.254.169.254', async () => {
+    const r = await validateUrlWithDns('http://169.254.169.254/');
+    assert.strictEqual(r.valid, false);
+  });
+
+  // DNS failure should not block (graceful degradation)
+  await testAsync('DNS Graceful: nonexistent-domain-xyz123.invalid', async () => {
+    const r = await validateUrlWithDns('http://nonexistent-domain-xyz123.invalid');
+    // Should pass sync checks and not crash on DNS failure
+    assert.strictEqual(r.valid, true);
+  });
+
+  // IPv6 loopback blocked
+  await testAsync('DNS Blocked: IPv6 loopback [::1]', async () => {
+    const r = await validateUrlWithDns('http://[::1]:8080');
+    assert.strictEqual(r.valid, false);
+  });
+
+  // Summary
+  process.stderr.write(`\nResults: ${passed} passed, ${failed} failed\n\n`);
+  if (failed > 0) process.exit(1);
+})();

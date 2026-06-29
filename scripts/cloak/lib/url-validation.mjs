@@ -1,10 +1,11 @@
 // URL validation — anti-SSRF protection
 // Blocks internal IPs, link-local, metadata endpoints, and DNS rebinding
 
-import { resolve } from 'node:dns';
+import { resolve as dnsResolve, resolve6 } from 'node:dns';
 import { promisify } from 'node:util';
 
-const resolveAsync = promisify(resolve);
+const resolveAsync = promisify(dnsResolve);
+const resolve6Async = promisify(resolve6);
 
 // RFC 1918 + special ranges
 const BLOCKED_RANGES = [
@@ -147,13 +148,18 @@ export async function validateUrlWithDns(url) {
     return syncResult;
   }
 
-  // Resolve hostname to IP and check
+  // Resolve hostname to IP (both A and AAAA records) and check
   try {
-    const addresses = await resolveAsync(hostname);
-    for (const addr of addresses) {
+    // Resolve A records (IPv4)
+    const aAddresses = await resolveAsync(hostname).catch(() => []);
+    for (const addr of aAddresses) {
       if (isInBlockedRange(addr)) {
         return { valid: false, reason: `DNS resolved to blocked IP: ${addr}` };
       }
+    }
+    // Resolve AAAA records (IPv6)
+    const aaaaAddresses = await resolve6Async(hostname).catch(() => []);
+    for (const addr of aaaaAddresses) {
       if (isBlockedIPv6(addr)) {
         return { valid: false, reason: `DNS resolved to blocked IPv6: ${addr}` };
       }

@@ -349,9 +349,9 @@ Full guide: `<skill_dir>/scripts/cloak/guida-fetch.md`
 
 These rules are enforced by the tooling — do not attempt to bypass them.
 
-- **No internal URLs.** CloakBrowser blocks `localhost`, `127.x`, `10.x`, `192.168.x`, `169.254.x`, and cloud metadata endpoints. This is SSRF protection.
-- **No path traversal.** `--script` must point within the skill directory. Use `--unsafe` only if you know the risks.
-- **Sandbox enabled by default.** User scripts run in a sandbox that restricts Playwright API access. Use `--unsafe` to bypass (document the risk).
+- **No internal URLs.** CloakBrowser blocks `localhost`, `127.x`, `10.x`, `192.168.x`, `169.254.x`, and cloud metadata endpoints. DNS resolution is also checked to prevent DNS rebinding attacks.
+- **No path traversal.** `--script` must point within the skill directory. Symlinks are resolved before the check. Use `--unsafe` only if you know the risks.
+- **Sandbox enabled by default.** User scripts receive proxied Playwright objects with only whitelisted methods. Note: Node.js APIs remain available — for full isolation, a `vm.Context` would be required. Use `--unsafe` to bypass the Playwright sandbox.
 - **Rate limiting.** 30 requests/minute by default. Use `--no-rate-limit` to disable.
 - **API keys.** Never paste API keys on the command line. Use env vars (`$CAMOFOX_API_KEY`) or `--env-file` for Docker.
 - **URL encoding.** Always use `--data-urlencode` with curl — never interpolate raw input into URLs.

@@ -53,11 +53,21 @@ HASH_FILE="$REPO_DIR/scripts/camofox/Readability.js.sha256"
 
 if [ -f "$READABILITY" ] && [ -f "$HASH_FILE" ]; then
   EXPECTED_HASH=$(cat "$HASH_FILE" | tr -d '[:space:]')
-  ACTUAL_HASH=$(sha256sum "$READABILITY" | awk '{print $1}')
-  if [ "$EXPECTED_HASH" = "$ACTUAL_HASH" ]; then
-    ok "Readability.js SHA-256 matches"
+  # Cross-platform hash: sha256sum (Linux) or shasum -a 256 (macOS)
+  if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL_HASH=$(sha256sum "$READABILITY" | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    ACTUAL_HASH=$(shasum -a 256 "$READABILITY" | awk '{print $1}')
   else
-    fail "Readability.js SHA-256 mismatch! Expected: $EXPECTED_HASH Got: $ACTUAL_HASH"
+    warn "No sha256sum/shasum found — skipping Readability.js integrity check"
+    ACTUAL_HASH=""
+  fi
+  if [ -n "$ACTUAL_HASH" ]; then
+    if [ "$EXPECTED_HASH" = "$ACTUAL_HASH" ]; then
+      ok "Readability.js SHA-256 matches"
+    else
+      fail "Readability.js SHA-256 mismatch! Expected: $EXPECTED_HASH Got: $ACTUAL_HASH"
+    fi
   fi
 elif [ -f "$READABILITY" ] && [ ! -f "$HASH_FILE" ]; then
   warn "Readability.js exists but no hash file. Run: sha256sum scripts/camofox/Readability.js | awk '{print \$1}' > scripts/camofox/Readability.js.sha256"

@@ -1,5 +1,8 @@
-// Sandbox for user scripts — restricts access to Playwright API surface
-// Prevents access to Node.js globals (require, process, child_process, etc.)
+// Sandbox for user scripts — restricts Playwright API surface
+// User scripts receive proxied { page, browser, context } objects that only
+// expose a whitelist of safe methods. Note: this does NOT sandbox Node.js
+// access — user scripts still run as normal ES modules with full Node.js APIs.
+// For Node.js isolation, a vm.Context or Worker would be required.
 
 /**
  * Create a sandboxed version of { page, browser, context } that exposes

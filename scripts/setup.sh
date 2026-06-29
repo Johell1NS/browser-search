@@ -48,14 +48,24 @@ HASH_FILE="$SKILL_DIR/scripts/camofox/Readability.js.sha256"
 
 if [ -f "$READABILITY" ] && [ -f "$HASH_FILE" ]; then
   EXPECTED_HASH=$(cat "$HASH_FILE" | tr -d '[:space:]')
-  ACTUAL_HASH=$(sha256sum "$READABILITY" | awk '{print $1}')
-  if [ "$EXPECTED_HASH" = "$ACTUAL_HASH" ]; then
-    echo "  ✅ Readability.js integrity verified"
+  # Cross-platform hash: sha256sum (Linux) or shasum -a 256 (macOS)
+  if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL_HASH=$(sha256sum "$READABILITY" | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    ACTUAL_HASH=$(shasum -a 256 "$READABILITY" | awk '{print $1}')
   else
-    echo "  ❌ Readability.js integrity check FAILED"
-    echo "     Expected: $EXPECTED_HASH"
-    echo "     Got:      $ACTUAL_HASH"
-    exit 1
+    echo "  ⚠️  No sha256sum/shasum found — skipping integrity check"
+    ACTUAL_HASH=""
+  fi
+  if [ -n "$ACTUAL_HASH" ]; then
+    if [ "$EXPECTED_HASH" = "$ACTUAL_HASH" ]; then
+      echo "  ✅ Readability.js integrity verified"
+    else
+      echo "  ❌ Readability.js integrity check FAILED"
+      echo "     Expected: $EXPECTED_HASH"
+      echo "     Got:      $ACTUAL_HASH"
+      exit 1
+    fi
   fi
 elif [ -f "$READABILITY" ] && [ ! -f "$HASH_FILE" ]; then
   echo "  ⚠️  Generating Readability.js hash..."

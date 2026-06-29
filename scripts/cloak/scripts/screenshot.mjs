@@ -3,13 +3,13 @@
 // Pass URL as second positional arg or via --url flag.
 
 import { randomUUID } from 'node:crypto';
-import { validateUrl } from '../lib/url-validation.mjs';
+import { validateUrlWithDns } from '../lib/url-validation.mjs';
 
 export default async ({ page }) => {
   const url = process.argv.find(a => a.startsWith('http')) || 'https://example.com';
 
-  // SSRF protection
-  const urlCheck = validateUrl(url);
+  // SSRF protection — use async DNS validation for DNS rebinding protection
+  const urlCheck = await validateUrlWithDns(url);
   if (!urlCheck.valid) {
     throw new Error(`URL blocked: ${urlCheck.reason}`);
   }

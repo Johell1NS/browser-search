@@ -289,7 +289,7 @@ browser-search includes multiple layers of security hardening:
 ### Built-in protections
 
 - **SSRF prevention.** URLs are validated before navigation — internal IPs (`127.x`, `10.x`, `192.168.x`, `169.254.x`), cloud metadata endpoints, and `.internal`/`.local` TLDs are blocked. DNS resolution is also checked to prevent DNS rebinding attacks.
-- **Script sandbox.** Custom scripts (`cloak-script.mjs`) run in a sandbox that restricts Playwright API access. Node.js globals (`require`, `process`, `child_process`) are not available. Use `--unsafe` to bypass (documented risk).
+- **Script sandbox.** Custom scripts (`cloak-script.mjs`) run in a sandbox that restricts the Playwright API surface (only whitelisted methods on `page`, `browser`, `context` are accessible). Note: Node.js APIs remain available — for full isolation, a `vm.Context` would be required. Use `--unsafe` to bypass the sandbox.
 - **Path traversal protection.** `--script` paths must be within the skill directory. Absolute paths and `../` traversal are blocked.
 - **Rate limiting.** 30 requests/minute by default to prevent accidental DoS or anti-bot triggers.
 - **Secure filenames.** Screenshots use random UUIDs instead of predictable timestamps.

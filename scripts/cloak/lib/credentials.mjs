@@ -1,10 +1,11 @@
-// Credential manager — secure API key storage
-// Reads from env vars first, falls back to encrypted local file
+// Credential manager — API key storage
+// Reads from env vars first, falls back to local JSON file (~/.browser-search/keys.json)
+// Note: keys are stored in plaintext with restrictive file permissions (0600).
+// For production use, consider an OS keyring (libsecret, Keychain, Credential Manager).
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { randomBytes } from 'node:crypto';
 
 const KEYS_DIR = join(homedir(), '.browser-search');
 const KEYS_FILE = join(KEYS_DIR, 'keys.json');
