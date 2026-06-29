@@ -4,7 +4,15 @@
 // Follows the official CloakBrowser pattern: launch() + Playwright API.
 
 import { launch, launchPersistentContext } from 'cloakbrowser';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { sep } from 'path';
+import { createSandbox } from './lib/sandbox.mjs';
+import { RateLimiter } from './lib/rate-limiter.mjs';
+import { validateUrlWithDns } from './lib/url-validation.mjs';
+
+// Skill directory for path validation (repo root)
+const SKILL_DIR = resolve(dirname(dirname(dirname(fileURLToPath(import.meta.url)))));
 
 function help() {
   process.stderr.write(`
@@ -28,6 +36,9 @@ Launch options (same as cloak-fetch):
 
 Other:
   --version, --help
+  --unsafe            Bypass sandbox (full Node.js access — DANGEROUS)
+  --verbose           Include stack traces in error output
+  --no-rate-limit     Disable rate limiting (default: 30 req/min)
 
 Script example:
   export default async ({ page }) => {
@@ -63,6 +74,9 @@ function parseArgs() {
     locale: null,
     persistent: null,
     timeout: 30000,
+    unsafe: has('--unsafe'),
+    verbose: has('--verbose'),
+    noRateLimit: has('--no-rate-limit'),
   };
 
   const strOpts = {
@@ -83,6 +97,22 @@ function parseArgs() {
 
 async function main() {
   const opts = parseArgs();
+
+  // Path traversal protection — script must be within skill directory
+  if (!opts.unsafe) {
+    const scriptPath = opts.script;
+    if (scriptPath !== SKILL_DIR && !scriptPath.startsWith(SKILL_DIR + sep)) {
+      const err = new Error(`Script path must be within skill directory (${SKILL_DIR}). Got: ${scriptPath}`);
+      process.stderr.write(JSON.stringify({ error: err.message }) + '\n');
+      process.exit(1);
+    }
+  }
+
+  // Rate limiting
+  if (!opts.noRateLimit) {
+    const limiter = new RateLimiter();
+    await limiter.acquire();
+  }
 
   const launchOpts = {
     headless: true,
@@ -118,11 +148,18 @@ async function main() {
       page = await context.newPage();
     }
 
-    const result = await scriptFn({ page, browser, context });
+    // Sandbox — restrict API surface unless --unsafe
+    const api = opts.unsafe
+      ? { page, browser, context }
+      : createSandbox({ page, browser, context });
+
+    const result = await scriptFn(api);
 
     process.stdout.write(JSON.stringify({ ok: true, data: result ?? null }) + '\n');
   } catch (err) {
-    process.stderr.write(JSON.stringify({ error: err.message, stack: err.stack }) + '\n');
+    const errObj = { error: err.message };
+    if (opts.verbose) errObj.stack = err.stack;
+    process.stderr.write(JSON.stringify(errObj) + '\n');
     process.exit(1);
   } finally {
     if (page && !opts.persistent) await page.close().catch(() => {});

@@ -40,6 +40,30 @@ import('cloakbrowser').then(c => {
   echo "     node -e \"import('cloakbrowser').then(c => c.ensureBinary())\""
 }
 
+# Verify Readability.js integrity
+echo ""
+echo "Verifying Readability.js integrity..."
+READABILITY="$SKILL_DIR/scripts/camofox/Readability.js"
+HASH_FILE="$SKILL_DIR/scripts/camofox/Readability.js.sha256"
+
+if [ -f "$READABILITY" ] && [ -f "$HASH_FILE" ]; then
+  EXPECTED_HASH=$(cat "$HASH_FILE" | tr -d '[:space:]')
+  ACTUAL_HASH=$(sha256sum "$READABILITY" | awk '{print $1}')
+  if [ "$EXPECTED_HASH" = "$ACTUAL_HASH" ]; then
+    echo "  ✅ Readability.js integrity verified"
+  else
+    echo "  ❌ Readability.js integrity check FAILED"
+    echo "     Expected: $EXPECTED_HASH"
+    echo "     Got:      $ACTUAL_HASH"
+    exit 1
+  fi
+elif [ -f "$READABILITY" ] && [ ! -f "$HASH_FILE" ]; then
+  echo "  ⚠️  Generating Readability.js hash..."
+  sha256sum "$READABILITY" | awk '{print $1}' > "$HASH_FILE"
+  echo "  ✅ Hash saved"
+fi
+
 echo ""
 echo "=== Setup complete ==="
 echo "Run 'node scripts/cloak/cloak-fetch.mjs --help' to verify."
+echo "Run 'bash scripts/audit.sh' for security audit."

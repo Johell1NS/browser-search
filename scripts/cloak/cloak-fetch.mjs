@@ -4,6 +4,8 @@
 
 import { launch, launchPersistentContext } from 'cloakbrowser';
 import { detectChallenge, extractState, waitForChallenge } from './challenges.mjs';
+import { validateUrlWithDns } from './lib/url-validation.mjs';
+import { RateLimiter } from './lib/rate-limiter.mjs';
 
 const VERSION = '2.0.0';
 
@@ -42,6 +44,8 @@ Session:
 
 Other:
   --version, --help
+  --verbose           Include stack traces in error output
+  --no-rate-limit     Disable rate limiting (default: 30 req/min)
 `);
 }
 
@@ -84,6 +88,8 @@ function parseArgs() {
     locale: null,
     persistent: null,
     json: true,
+    verbose: has('--verbose'),
+    noRateLimit: has('--no-rate-limit'),
   };
 
   const strOpts = {
@@ -142,6 +148,12 @@ async function fetchPage(opts) {
   if (opts.platform) extraArgs.push(`--fingerprint-platform=${opts.platform}`);
   if (opts.brand) extraArgs.push(`--fingerprint-brand=${opts.brand}`);
   if (extraArgs.length > 0) launchOpts.args = extraArgs;
+
+  // SSRF protection — validate URL before navigation
+  const urlCheck = await validateUrlWithDns(opts.url);
+  if (!urlCheck.valid) {
+    throw new Error(`URL blocked: ${urlCheck.reason}`);
+  }
 
   let browser = null;
   let context = null;
@@ -224,6 +236,12 @@ async function main() {
   const opts = parseArgs();
   const maxRetries = Math.max(0, opts.retry || 0);
 
+  // Rate limiting
+  if (!opts.noRateLimit) {
+    const limiter = new RateLimiter();
+    await limiter.acquire();
+  }
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (attempt > 0) {
       process.stderr.write(JSON.stringify({ retry: attempt, max: maxRetries }) + '\n');
@@ -236,7 +254,9 @@ async function main() {
       process.exit(0);
     } catch (err) {
       if (attempt < maxRetries) continue;
-      process.stderr.write(JSON.stringify({ error: err.message }) + '\n');
+      const errObj = { error: err.message };
+      if (opts.verbose) errObj.stack = err.stack;
+      process.stderr.write(JSON.stringify(errObj) + '\n');
       process.exit(1);
     }
   }

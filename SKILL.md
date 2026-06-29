@@ -36,25 +36,26 @@ Docker container on `localhost:8080`. Always the first choice for any search.
 **Commands:**
 
 Direct call to SearXNG REST API via `curl`. JSON output.
+⚠️ **Always use `--data-urlencode`** for query parameters — never interpolate raw user input into URLs.
 
 ```bash
-# Simple search
-exec curl -s "http://localhost:8080/search?format=json&q=<query>"
+# Simple search (⚠️ use --data-urlencode for query safety)
+exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json"
 
 # With language and category
-exec curl -s "http://localhost:8080/search?format=json&q=<query>&language=en&categories=news"
+exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "language=en" --data-urlencode "categories=news"
 
 # With time range (day, week, month, year)
-exec curl -s "http://localhost:8080/search?format=json&q=<query>&time_range=month"
+exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "time_range=month"
 
 # Specific engines
-exec curl -s "http://localhost:8080/search?format=json&q=<query>&engines=google,wikipedia"
+exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "engines=google,wikipedia"
 
 # Image search
-exec curl -s "http://localhost:8080/search?format=json&q=<query>&categories=images"
+exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "categories=images"
 
 # Pagination
-exec curl -s "http://localhost:8080/search?format=json&q=<query>&pageno=2"
+exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "pageno=2"
 
 # Health check
 exec curl -s -o /dev/null -w "%{http_code}" "http://localhost:8080/search?format=json&q=health"
@@ -287,11 +288,11 @@ exec curl -s -X DELETE "http://localhost:9377/sessions/opencode-bot" \
 
 ```bash
 docker start camofox-browser
-# If doesn't exist:
+# If doesn't exist (⚠️ use --env-file for API keys, bind to 127.0.0.1):
+# Create .env file first: echo "CAMOFOX_API_KEY=your-key" > .env
 docker run -d --name camofox-browser --restart unless-stopped \
-  -p 9377:9377 \
-  -e CAMOFOX_API_KEY=<your-api-key> \
-  -e CAMOFOX_ADMIN_KEY=<your-admin-key> \
+  -p 127.0.0.1:9377:9377 \
+  --env-file .env \
   camofox-browser:latest
 ```
 
@@ -341,6 +342,21 @@ exec node <skill_dir>/scripts/cloak/cloak-script.mjs \
 ```
 
 Full guide: `<skill_dir>/scripts/cloak/guida-fetch.md`
+
+---
+
+## Security rules
+
+These rules are enforced by the tooling — do not attempt to bypass them.
+
+- **No internal URLs.** CloakBrowser blocks `localhost`, `127.x`, `10.x`, `192.168.x`, `169.254.x`, and cloud metadata endpoints. This is SSRF protection.
+- **No path traversal.** `--script` must point within the skill directory. Use `--unsafe` only if you know the risks.
+- **Sandbox enabled by default.** User scripts run in a sandbox that restricts Playwright API access. Use `--unsafe` to bypass (document the risk).
+- **Rate limiting.** 30 requests/minute by default. Use `--no-rate-limit` to disable.
+- **API keys.** Never paste API keys on the command line. Use env vars (`$CAMOFOX_API_KEY`) or `--env-file` for Docker.
+- **URL encoding.** Always use `--data-urlencode` with curl — never interpolate raw input into URLs.
+- **Docker binding.** Always use `127.0.0.1:` prefix for port mapping. Never expose to `0.0.0.0`.
+- **No social media browsing.** Instagram, Facebook, TikTok, LinkedIn, Twitter/X require login — don't attempt with Camofox or CloakBrowser.
 
 ---
 

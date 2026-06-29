@@ -1,1 +1,29 @@
+# Dependencies
 node_modules/
+
+# Environment & credentials
+.env
+.env.*
+*.key
+*.pem
+*.crt
+keys.json
+
+# Browser profiles (cookies, sessions)
+profile/
+*.profile/
+
+# Screenshots & temp files
+*.png
+/tmp/
+/tmp_*/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Rate limiter state
+~/.browser-search/rate-state.json

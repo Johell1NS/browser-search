@@ -4,7 +4,7 @@
   "description": "Multi-tier web search & browser automation for AI agents. SearXNG + Camofox + CloakBrowser.",
   "private": false,
   "dependencies": {
-    "cloakbrowser": "^0.3.31",
-    "playwright-core": "^1.60.0"
+    "cloakbrowser": "0.3.31",
+    "playwright-core": "1.60.0"
   }
 }
