@@ -21,6 +21,9 @@ profile/
 # Logs
 *.log
 
+# Workspace config
+AGENTS.md
+
 # OS files
 .DS_Store
 Thumbs.db
