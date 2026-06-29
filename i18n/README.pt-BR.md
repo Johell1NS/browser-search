@@ -222,6 +222,36 @@ Mostre este README ao seu agente de IA para uma instalação completa adaptada a
 - **Baixar arquivos.** É somente leitura (exceto capturas de tela explícitas).
 - **Burlar paywalls.** Não contorna sistemas de pagamento ou login.
 
+## Segurança
+
+browser-search inclui múltiplas camadas de proteção de segurança:
+
+### Proteções integradas
+
+- **Prevenção SSRF.** URLs são validadas antes da navegação — IPs internos (`127.x`, `10.x`, `192.168.x`, `169.254.x`), endpoints de metadados em nuvem e TLDs `.internal`/`.local` são bloqueados. A resolução DNS também é verificada para evitar ataques de DNS rebinding.
+- **Sandbox de scripts.** Scripts personalizados (`cloak-script.mjs`) são executados em uma sandbox que restringe a superfície da API do Playwright (apenas métodos autorizados em `page`, `browser`, `context` são acessíveis). Nota: as APIs Node.js permanecem disponíveis — para isolamento completo, um `vm.Context` seria necessário. Use `--unsafe` para ignorar a sandbox e a proteção SSRF.
+- **Proteção contra path traversal.** Caminhos de `--script` devem estar dentro do diretório da skill. Caminhos absolutos e travessia com `../` são bloqueados.
+- **Rate limiting.** 30 requisições/minuto por padrão para prevenir DoS acidental ou ativação anti-bot (use `--no-rate-limit` para desabilitar).
+- **Nomes de arquivo seguros.** Capturas de tela usam UUIDs aleatórios em vez de timestamps previsíveis.
+- **Supressão de stack trace.** A saída de erros omite stack traces por padrão. Use `--verbose` para depuração.
+
+### Boas práticas
+
+- **Chaves de API.** Use variáveis de ambiente (`$CAMOFOX_API_KEY`) ou `--env-file` para Docker. Nunca cole chaves na linha de comando — elas aparecem em `ps aux` e no histórico do shell.
+- **Bind do Docker.** Sempre use o prefixo `127.0.0.1:` para mapeamento de porta (`-p 127.0.0.1:9377:9377`). Nunca exponha em `0.0.0.0`.
+- **Codificação de URL.** Use `--data-urlencode` com curl — nunca interpole entradas brutas em URLs.
+- **Fixação de versões.** Dependências usam versões exatas (sem intervalos `^`) e `package-lock.json` para builds reproduzíveis.
+
+### Auditoria
+
+Execute `bash scripts/audit.sh` para verificar a postura de segurança da sua instalação.
+
+### Riscos residuais
+
+- **Injeção de prompt.** Um agente de IA pode ser enganado a realizar ações prejudiciais. As ferramentas mitigam danos mas não podem impedir um agente completamente comprometido.
+- **Supply chain.** CloakBrowser baixa um binário Chromium de `cloakbrowser.dev`. O binário é verificado por SHA-256 mas é proprietário.
+- **Automação de navegador.** Qualquer ferramenta com acesso ao navegador tem riscos inerentes. Execute em ambientes isolados quando possível.
+
 ## Participe
 
 browser-search é open source e gratuito. Se você achar útil:

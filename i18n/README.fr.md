@@ -222,6 +222,36 @@ Montrez ce README à votre agent IA pour une installation complète adaptée à 
 - **Télécharger des fichiers.** Il est en lecture seule (sauf captures d'écran explicites).
 - **Contourner les paywalls.** Ne contourne pas les systèmes de paiement ou de connexion.
 
+## Sécurité
+
+browser-search comprend plusieurs couches de durcissement de la sécurité :
+
+### Protections intégrées
+
+- **Prévention SSRF.** Les URLs sont validées avant la navigation — les IP internes (`127.x`, `10.x`, `192.168.x`, `169.254.x`), les points de terminaison de métadonnées cloud et les TLD `.internal`/`.local` sont bloqués. La résolution DNS est également vérifiée pour prévenir les attaques de DNS rebinding.
+- **Sandbox de scripts.** Les scripts personnalisés (`cloak-script.mjs`) s'exécutent dans une sandbox qui restreint la surface API de Playwright (seules les méthodes autorisées sur `page`, `browser`, `context` sont accessibles). Note : les API Node.js restent disponibles — pour un isolement complet, un `vm.Context` serait nécessaire. Utilisez `--unsafe` pour contourner la sandbox et la protection SSRF.
+- **Protection contre le path traversal.** Les chemins `--script` doivent se trouver dans le répertoire de la skill. Les chemins absolus et la traversée `../` sont bloqués.
+- **Rate limiting.** 30 requêtes/minute par défaut pour éviter les DoS accidentels ou le déclenchement anti-bot (utilisez `--no-rate-limit` pour désactiver).
+- **Noms de fichiers sécurisés.** Les captures d'écran utilisent des UUID aléatoires au lieu d'horodatages prévisibles.
+- **Suppression des stack traces.** La sortie d'erreur omet les stack traces par défaut. Utilisez `--verbose` pour le débogage.
+
+### Bonnes pratiques
+
+- **Clés API.** Utilisez des variables d'environnement (`$CAMOFOX_API_KEY`) ou `--env-file` pour Docker. Ne collez jamais les clés sur la ligne de commande — elles apparaissent dans `ps aux` et l'historique du shell.
+- **Liaison Docker.** Utilisez toujours le préfixe `127.0.0.1:` pour le mappage de ports (`-p 127.0.0.1:9377:9377`). N'exposez jamais sur `0.0.0.0`.
+- **Encodage URL.** Utilisez `--data-urlencode` avec curl — n'interpolez jamais d'entrées brutes dans les URLs.
+- **Épinglage de versions.** Les dépendances utilisent des versions exactes (pas de plages `^`) et `package-lock.json` pour des builds reproductibles.
+
+### Audit
+
+Exécutez `bash scripts/audit.sh` pour vérifier la posture de sécurité de votre installation.
+
+### Risques résiduels
+
+- **Injection de prompt.** Un agent IA peut être amené à effectuer des actions nuisibles. Les outils atténuent les dégâts mais ne peuvent pas empêcher un agent complètement compromis.
+- **Supply chain.** CloakBrowser télécharge un binaire Chromium depuis `cloakbrowser.dev`. Le binaire est vérifié par SHA-256 mais est propriétaire.
+- **Automatisation du navigateur.** Tout outil avec accès au navigateur comporte des risques inhérents. Exécutez dans des environnements isolés lorsque c'est possible.
+
 ## Participer
 
 browser-search est open source et gratuit. Si vous le trouvez utile :
