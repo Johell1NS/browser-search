@@ -17,8 +17,8 @@ cd <searxng-directory> && docker compose up -d
 docker start camofox-browser 2>/dev/null || docker run -d \
   --name camofox-browser \
   --restart unless-stopped \
-  --read-only \
   --tmpfs /tmp \
+  --tmpfs /home/camofox/.cache \
   --memory 2g \
   --cpus 2 \
   --pids-limit 200 \
@@ -33,7 +33,7 @@ docker start camofox-browser 2>/dev/null || docker run -d \
 - **Port binding:** Always use `127.0.0.1:` prefix to bind to localhost only. Never expose to `0.0.0.0`.
 - **API keys:** Use `--env-file .env` instead of `-e` on command line. Keys in command line appear in `ps aux` and shell history.
 - **Resource limits:** `--memory`, `--cpus`, and `--pids-limit` prevent container runaway.
-- **Read-only filesystem:** `--read-only` + `--tmpfs /tmp` limits container write access.
+- **Writable dirs:** `--tmpfs /tmp` and `--tmpfs /home/camofox/.cache` provide writable temp/cache for browser profiles. `--read-only` is intentionally omitted as Camofox needs writable profile storage.
 - **No new privileges:** `--security-opt no-new-privileges` prevents privilege escalation.
 
 ## Diagnostics

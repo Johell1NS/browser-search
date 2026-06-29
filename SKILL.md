@@ -245,43 +245,43 @@ Use with `POST /tabs/{tabId}/navigate` passing `macro` and `query`:
 # 1. Create tab
 exec curl -s -X POST "http://localhost:9377/tabs" \
   -H 'Content-Type: application/json' \
-  -d '{"userId":"opencode-bot","sessionKey":"default","url":"https://example.com"}'
+  -d '{"userId":"$USER_ID","sessionKey":"$SESSION_KEY","url":"https://example.com"}'
 # → {"tabId":"abc123","url":"https://example.com/"}
 
 # 2. Snapshot (understand structure and refs)
-exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=opencode-bot"
+exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=$USER_ID"
 
 # 3. If snapshot is sparse → evaluate for raw HTML
 exec curl -s -X POST "http://localhost:9377/tabs/abc123/evaluate" \
   -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $CAMOFOX_API_KEY" \
-  -d '{"userId":"opencode-bot","expression":"document.querySelector(\"main\")?.innerHTML || document.body.innerHTML"}'
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{"userId":"$USER_ID","expression":"document.querySelector(\"main\")?.innerHTML || document.body.innerHTML"}'
 
 # 4. Interact: scroll, click, type...
 exec curl -s -X POST "http://localhost:9377/tabs/abc123/scroll" \
   -H 'Content-Type: application/json' \
-  -d '{"userId":"opencode-bot","direction":"down","amount":500}'
+  -d '{"userId":"$USER_ID","direction":"down","amount":500}'
 
 # 5. After each interaction, take new snapshot (refs change!)
-exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=opencode-bot"
+exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=$USER_ID"
 
 # 6. Click and new snapshot
 exec curl -s -X POST "http://localhost:9377/tabs/abc123/click" \
   -H 'Content-Type: application/json' \
-  -d '{"userId":"opencode-bot","ref":"e3"}'
-exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=opencode-bot"
+  -d '{"userId":"$USER_ID","ref":"e3"}'
+exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=$USER_ID"
 
 # 7. Structured extract
 exec curl -s -X POST "http://localhost:9377/tabs/abc123/extract" \
   -H 'Content-Type: application/json' \
-  -d '{"userId":"opencode-bot","schema":{"type":"object","properties":{"title":{"x-ref":"e1"}}}}'
+  -d '{"userId":"$USER_ID","schema":{"type":"object","properties":{"title":{"x-ref":"e1"}}}}'
 
 # 8. Close tab
-exec curl -s -X DELETE "http://localhost:9377/tabs/abc123?userId=opencode-bot"
+exec curl -s -X DELETE "http://localhost:9377/tabs/abc123?userId=$USER_ID"
 
 # 9. (Optional) Cleanup session (requires API key)
-exec curl -s -X DELETE "http://localhost:9377/sessions/opencode-bot" \
-  -H "Authorization: Bearer $CAMOFOX_API_KEY"
+exec curl -s -X DELETE "http://localhost:9377/sessions/$USER_ID" \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 **Troubleshooting — container down:**
@@ -328,7 +328,8 @@ exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://..." --proxy "socks
 exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://..." --seed 12345 --platform windows
 
 # Screenshot (⚠️ writes PNG file — breaks read-only rule)
-exec node <skill_dir>/scripts/cloak/cloak-script.mjs --script "<skill_dir>/scripts/cloak/scripts/screenshot.mjs"
+# Pass URL as positional arg after the script path
+exec node <skill_dir>/scripts/cloak/cloak-script.mjs --script "<skill_dir>/scripts/cloak/scripts/screenshot.mjs" "https://example.com"
 ```
 
 #### cloak-script.mjs — For complex interactions
@@ -357,6 +358,19 @@ These rules are enforced by the tooling — do not attempt to bypass them.
 - **URL encoding.** Always use `--data-urlencode` with curl — never interpolate raw input into URLs.
 - **Docker binding.** Always use `127.0.0.1:` prefix for port mapping. Never expose to `0.0.0.0`.
 - **No social media browsing.** Instagram, Facebook, TikTok, LinkedIn, Twitter/X require login — don't attempt with Camofox or CloakBrowser.
+
+### Security-relevant CLI flags
+
+| Flag | Script | Purpose | When to use |
+|------|--------|---------|-------------|
+| `--unsafe` | `cloak-script.mjs` | Bypass Playwright sandbox | Scripts need `page.route()`, `setExtraHTTPHeaders()`, `addInitScript()` |
+| `--no-rate-limit` | Both | Disable 30 req/min limit | Bulk scraping (use responsibly) |
+| `--verbose` | Both | Include stack traces in errors | Debugging only |
+| `--retry <n>` | `cloak-fetch.mjs` | Retry on failure | Unreliable networks |
+| `--timeout <ms>` | Both | Navigation/launch timeout | Slow sites (default: 30000) |
+| `--wait <ms>` | `cloak-fetch.mjs` | Extra wait after page load | Dynamic content (default: 1000) |
+| `--max-chars <n>` | `cloak-fetch.mjs` | Truncate output | Large pages (default: 100000) |
+| `--persistent <dir>` | Both | Persistent browser profile | Cookie/session persistence |
 
 ---
 

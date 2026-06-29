@@ -120,14 +120,6 @@ function parseArgs() {
   return opts;
 }
 
-function renderOutput(format, title, url, text) {
-  if (!text) return '';
-  if (format === 'html') return text;
-  if (format === 'text') return [title || url, url, text].filter(Boolean).join('\n');
-  const header = title ? `# ${title}\n\n` : '';
-  return `${header}Source: ${url}\n\n${text}`;
-}
-
 function truncate(text, maxChars) {
   if (!text || text.length <= maxChars) return text || '';
   return text.slice(0, maxChars) + '\n\n[truncated]';
