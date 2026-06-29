@@ -363,7 +363,7 @@ These rules are enforced by the tooling — do not attempt to bypass them.
 
 | Flag | Script | Purpose | When to use |
 |------|--------|---------|-------------|
-| `--unsafe` | `cloak-script.mjs` | Bypass Playwright sandbox | Scripts need `page.route()`, `setExtraHTTPHeaders()`, `addInitScript()` |
+| `--unsafe` | `cloak-fetch.mjs`, `cloak-script.mjs` | Bypass SSRF protection, sandbox, and path traversal | Access local/internal services or blocked Playwright APIs |
 | `--no-rate-limit` | Both | Disable 30 req/min limit | Bulk scraping (use responsibly) |
 | `--verbose` | Both | Include stack traces in errors | Debugging only |
 | `--retry <n>` | `cloak-fetch.mjs` | Retry on failure | Unreliable networks |

@@ -46,6 +46,7 @@ Other:
   --version, --help
   --verbose           Include stack traces in error output
   --no-rate-limit     Disable rate limiting (default: 30 req/min)
+  --unsafe            Bypass SSRF protection (allow localhost/private IPs — DANGEROUS)
 `);
 }
 
@@ -90,6 +91,7 @@ function parseArgs() {
     json: true,
     verbose: has('--verbose'),
     noRateLimit: has('--no-rate-limit'),
+    unsafe: has('--unsafe'),
   };
 
   const strOpts = {
@@ -141,10 +143,12 @@ async function fetchPage(opts) {
   if (opts.brand) extraArgs.push(`--fingerprint-brand=${opts.brand}`);
   if (extraArgs.length > 0) launchOpts.args = extraArgs;
 
-  // SSRF protection — validate URL before navigation
-  const urlCheck = await validateUrlWithDns(opts.url);
-  if (!urlCheck.valid) {
-    throw new Error(`URL blocked: ${urlCheck.reason}`);
+  // SSRF protection — validate URL before navigation (bypass with --unsafe)
+  if (!opts.unsafe) {
+    const urlCheck = await validateUrlWithDns(opts.url);
+    if (!urlCheck.valid) {
+      throw new Error(`URL blocked: ${urlCheck.reason}`);
+    }
   }
 
   let browser = null;
