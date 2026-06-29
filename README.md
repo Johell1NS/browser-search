@@ -282,6 +282,36 @@ and convert the commands to your agent's syntax before using the skill.
 - **Download files.** It is read-only (except for explicit screenshots).
 - **Bypass paywalls.** Does not circumvent payment or login systems.
 
+## Security
+
+browser-search includes multiple layers of security hardening:
+
+### Built-in protections
+
+- **SSRF prevention.** URLs are validated before navigation — internal IPs (`127.x`, `10.x`, `192.168.x`, `169.254.x`), cloud metadata endpoints, and `.internal`/`.local` TLDs are blocked. DNS resolution is also checked to prevent DNS rebinding attacks.
+- **Script sandbox.** Custom scripts (`cloak-script.mjs`) run in a sandbox that restricts the Playwright API surface (only whitelisted methods on `page`, `browser`, `context` are accessible). Note: Node.js APIs remain available — for full isolation, a `vm.Context` would be required. Use `--unsafe` to bypass the sandbox.
+- **Path traversal protection.** `--script` paths must be within the skill directory. Absolute paths and `../` traversal are blocked.
+- **Rate limiting.** 30 requests/minute by default to prevent accidental DoS or anti-bot triggers.
+- **Secure filenames.** Screenshots use random UUIDs instead of predictable timestamps.
+- **Stack trace suppression.** Error output omits stack traces by default. Use `--verbose` for debugging.
+
+### Best practices
+
+- **API keys.** Use environment variables (`$CAMOFOX_API_KEY`) or `--env-file` for Docker. Never paste keys on the command line — they appear in `ps aux` and shell history.
+- **Docker binding.** Always use `127.0.0.1:` prefix for port mapping (`-p 127.0.0.1:9377:9377`). Never expose to `0.0.0.0`.
+- **URL encoding.** Use `--data-urlencode` with curl — never interpolate raw input into URLs.
+- **Version pinning.** Dependencies use exact versions (no `^` caret ranges) and `package-lock.json` for reproducible builds.
+
+### Audit
+
+Run `bash scripts/audit.sh` to verify the security posture of your installation.
+
+### Residual risks
+
+- **Prompt injection.** An AI agent can be tricked into performing harmful actions. The tooling mitigates damage but cannot prevent a fully compromised agent.
+- **Supply chain.** CloakBrowser downloads a Chromium binary from `cloakbrowser.dev`. The binary is SHA-256 verified but proprietary.
+- **Browser automation.** Any tool with browser access has inherent risks. Run in isolated environments when possible.
+
 ## Get involved
 
 browser-search is open source and free. If you find it useful:

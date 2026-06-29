@@ -36,25 +36,26 @@ Docker container on `localhost:8080`. Always the first choice for any search.
 **Commands:**
 
 Direct call to SearXNG REST API via `curl`. JSON output.
+⚠️ **Always use `--data-urlencode`** for query parameters — never interpolate raw user input into URLs.
 
 ```bash
-# Simple search
-exec curl -s "http://localhost:8080/search?format=json&q=<query>"
+# Simple search (⚠️ use --data-urlencode for query safety)
+exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json"
 
 # With language and category
-exec curl -s "http://localhost:8080/search?format=json&q=<query>&language=en&categories=news"
+exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "language=en" --data-urlencode "categories=news"
 
 # With time range (day, week, month, year)
-exec curl -s "http://localhost:8080/search?format=json&q=<query>&time_range=month"
+exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "time_range=month"
 
 # Specific engines
-exec curl -s "http://localhost:8080/search?format=json&q=<query>&engines=google,wikipedia"
+exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "engines=google,wikipedia"
 
 # Image search
-exec curl -s "http://localhost:8080/search?format=json&q=<query>&categories=images"
+exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "categories=images"
 
 # Pagination
-exec curl -s "http://localhost:8080/search?format=json&q=<query>&pageno=2"
+exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "pageno=2"
 
 # Health check
 exec curl -s -o /dev/null -w "%{http_code}" "http://localhost:8080/search?format=json&q=health"
@@ -244,54 +245,54 @@ Use with `POST /tabs/{tabId}/navigate` passing `macro` and `query`:
 # 1. Create tab
 exec curl -s -X POST "http://localhost:9377/tabs" \
   -H 'Content-Type: application/json' \
-  -d '{"userId":"opencode-bot","sessionKey":"default","url":"https://example.com"}'
+  -d '{"userId":"$USER_ID","sessionKey":"$SESSION_KEY","url":"https://example.com"}'
 # → {"tabId":"abc123","url":"https://example.com/"}
 
 # 2. Snapshot (understand structure and refs)
-exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=opencode-bot"
+exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=$USER_ID"
 
 # 3. If snapshot is sparse → evaluate for raw HTML
 exec curl -s -X POST "http://localhost:9377/tabs/abc123/evaluate" \
   -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $CAMOFOX_API_KEY" \
-  -d '{"userId":"opencode-bot","expression":"document.querySelector(\"main\")?.innerHTML || document.body.innerHTML"}'
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{"userId":"$USER_ID","expression":"document.querySelector(\"main\")?.innerHTML || document.body.innerHTML"}'
 
 # 4. Interact: scroll, click, type...
 exec curl -s -X POST "http://localhost:9377/tabs/abc123/scroll" \
   -H 'Content-Type: application/json' \
-  -d '{"userId":"opencode-bot","direction":"down","amount":500}'
+  -d '{"userId":"$USER_ID","direction":"down","amount":500}'
 
 # 5. After each interaction, take new snapshot (refs change!)
-exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=opencode-bot"
+exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=$USER_ID"
 
 # 6. Click and new snapshot
 exec curl -s -X POST "http://localhost:9377/tabs/abc123/click" \
   -H 'Content-Type: application/json' \
-  -d '{"userId":"opencode-bot","ref":"e3"}'
-exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=opencode-bot"
+  -d '{"userId":"$USER_ID","ref":"e3"}'
+exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=$USER_ID"
 
 # 7. Structured extract
 exec curl -s -X POST "http://localhost:9377/tabs/abc123/extract" \
   -H 'Content-Type: application/json' \
-  -d '{"userId":"opencode-bot","schema":{"type":"object","properties":{"title":{"x-ref":"e1"}}}}'
+  -d '{"userId":"$USER_ID","schema":{"type":"object","properties":{"title":{"x-ref":"e1"}}}}'
 
 # 8. Close tab
-exec curl -s -X DELETE "http://localhost:9377/tabs/abc123?userId=opencode-bot"
+exec curl -s -X DELETE "http://localhost:9377/tabs/abc123?userId=$USER_ID"
 
 # 9. (Optional) Cleanup session (requires API key)
-exec curl -s -X DELETE "http://localhost:9377/sessions/opencode-bot" \
-  -H "Authorization: Bearer $CAMOFOX_API_KEY"
+exec curl -s -X DELETE "http://localhost:9377/sessions/$USER_ID" \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 **Troubleshooting — container down:**
 
 ```bash
 docker start camofox-browser
-# If doesn't exist:
+# If doesn't exist (⚠️ use --env-file for API keys, bind to 127.0.0.1):
+# Create .env file first: echo "CAMOFOX_API_KEY=your-key" > .env
 docker run -d --name camofox-browser --restart unless-stopped \
-  -p 9377:9377 \
-  -e CAMOFOX_API_KEY=<your-api-key> \
-  -e CAMOFOX_ADMIN_KEY=<your-admin-key> \
+  -p 127.0.0.1:9377:9377 \
+  --env-file .env \
   camofox-browser:latest
 ```
 
@@ -327,7 +328,8 @@ exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://..." --proxy "socks
 exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://..." --seed 12345 --platform windows
 
 # Screenshot (⚠️ writes PNG file — breaks read-only rule)
-exec node <skill_dir>/scripts/cloak/cloak-script.mjs --script "<skill_dir>/scripts/cloak/scripts/screenshot.mjs"
+# Pass URL as positional arg after the script path
+exec node <skill_dir>/scripts/cloak/cloak-script.mjs --script "<skill_dir>/scripts/cloak/scripts/screenshot.mjs" "https://example.com"
 ```
 
 #### cloak-script.mjs — For complex interactions
@@ -341,6 +343,34 @@ exec node <skill_dir>/scripts/cloak/cloak-script.mjs \
 ```
 
 Full guide: `<skill_dir>/scripts/cloak/guida-fetch.md`
+
+---
+
+## Security rules
+
+These rules are enforced by the tooling — do not attempt to bypass them.
+
+- **No internal URLs.** CloakBrowser blocks `localhost`, `127.x`, `10.x`, `192.168.x`, `169.254.x`, and cloud metadata endpoints. DNS resolution is also checked to prevent DNS rebinding attacks.
+- **No path traversal.** `--script` must point within the skill directory. Symlinks are resolved before the check. Use `--unsafe` only if you know the risks.
+- **Sandbox enabled by default.** User scripts receive proxied Playwright objects with only whitelisted methods. Note: Node.js APIs remain available — for full isolation, a `vm.Context` would be required. Use `--unsafe` to bypass the Playwright sandbox.
+- **Rate limiting.** 30 requests/minute by default. Use `--no-rate-limit` to disable.
+- **API keys.** Never paste API keys on the command line. Use env vars (`$CAMOFOX_API_KEY`) or `--env-file` for Docker.
+- **URL encoding.** Always use `--data-urlencode` with curl — never interpolate raw input into URLs.
+- **Docker binding.** Always use `127.0.0.1:` prefix for port mapping. Never expose to `0.0.0.0`.
+- **No social media browsing.** Instagram, Facebook, TikTok, LinkedIn, Twitter/X require login — don't attempt with Camofox or CloakBrowser.
+
+### Security-relevant CLI flags
+
+| Flag | Script | Purpose | When to use |
+|------|--------|---------|-------------|
+| `--unsafe` | `cloak-fetch.mjs`, `cloak-script.mjs` | Bypass SSRF protection, sandbox, and path traversal | Access local/internal services or blocked Playwright APIs |
+| `--no-rate-limit` | Both | Disable 30 req/min limit | Bulk scraping (use responsibly) |
+| `--verbose` | Both | Include stack traces in errors | Debugging only |
+| `--retry <n>` | `cloak-fetch.mjs` | Retry on failure | Unreliable networks |
+| `--timeout <ms>` | Both | Navigation/launch timeout | Slow sites (default: 30000) |
+| `--wait <ms>` | `cloak-fetch.mjs` | Extra wait after page load | Dynamic content (default: 1000) |
+| `--max-chars <n>` | `cloak-fetch.mjs` | Truncate output | Large pages (default: 100000) |
+| `--persistent <dir>` | Both | Persistent browser profile | Cookie/session persistence |
 
 ---
 
