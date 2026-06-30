@@ -213,8 +213,6 @@ browser-search ne fournit pas de fichiers docker-compose ni de scripts d'install
 
 **Remarque :** `SKILL.md` est écrite pour la syntaxe **OpenCode** (`exec`, `curl`). Si votre agent utilise un format différent (Claude Code, Cursor, etc.), lisez-la et convertissez les commandes dans la syntaxe de votre agent avant d'utiliser la skill.
 
-Consultez [FAQ.html](https://github.com/Johell1NS/browser-search/blob/main/FAQ.html) pour les questions fréquentes.
-
 ## Variables d'environnement
 
 | Variable | Requise pour | Défaut |
@@ -269,6 +267,10 @@ browser-search est open source et gratuit. Si vous le trouvez utile :
 - 🧠 **Adaptez-le** — fork, ajustez le SKILL.md, faites-le vôtre
 
 Chaque contribution, aussi petite soit-elle, rend ce projet meilleur.
+
+## FAQ
+
+Consultez [FAQ.html](FAQ.html) pour les questions fréquentes sur l'installation, l'architecture, les choix de conception et les problèmes courants.
 
 ## Licence
 
