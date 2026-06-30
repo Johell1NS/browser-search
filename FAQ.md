@@ -173,6 +173,22 @@ Real-world reference numbers from the README:
 
 </details>
 
+<details>
+<summary>Can I change the default ports (8080 / 9377)?</summary>
+
+**Yes.** The ports used by SearXNG and Camofox are fully customizable.
+
+You can ask your AI agent to change them, or do it yourself by editing
+the port references in `SKILL.md` and the Docker configuration — either
+way, the agent will adapt automatically.
+
+For example, you can tell your agent: *"Use port 8888 for SearXNG and
+9444 for Camofox instead of the defaults."*
+
+Default ports are `8080` (SearXNG) and `9377` (Camofox).
+
+</details>
+
 ---
 
 See the [README](README.md) and [SKILL.md](SKILL.md) for full documentation.
