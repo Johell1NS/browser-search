@@ -191,6 +191,8 @@ CloakBrowser é instalado via npm. SearXNG e Camofox exigem contêineres Docker 
 
 Mostre este README ao seu agente de IA para uma instalação completa adaptada ao seu ambiente e plataforma.
 
+browser-search não fornece arquivos docker-compose ou scripts de instalação específicos para plataforma. Seu agente de IA lê as referências abaixo e adapta a configuração ao seu sistema operacional, arquitetura e ambiente automaticamente.
+
 **Visão geral dos serviços:**
 
 | Serviço | Como | Referência |
