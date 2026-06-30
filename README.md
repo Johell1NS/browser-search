@@ -90,21 +90,21 @@ flow improvements, and orchestration updates over time. 🚀
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    browser-search                        │
+│                    browser-search                       │
 │                                                         │
 │  ┌──────────────┐                                       │
-│  │    Search     │                                       │
-│  │               │                                       │
-│  │  SearXNG      │  search engines → URLs               │
-│  │  (Docker)     │  JSON results, fast                  │
-│  │  :8080        │                                       │
+│  │    Search    │                                       │
+│  │              │                                       │
+│  │  SearXNG     │   search engines → URLs               │
+│  │  (Docker)    │   JSON results, fast                  │
+│  │  :8080       │                                       │
 │  └──────────────┘                                       │
-│         │                                                │
-│         │ results ready → to browse                      │
-│         ↓                                                │
+│         │                                               │
+│         │ results ready → to browse                     │
+│         ↓                                               │
 │  ┌─────────────────────────────────────┐                │
-│  │           Browsing                   │                │
-│  │                                      │                │
+│  │           Browsing                  │                │
+│  │                                     │                │
 │  │  ┌──────────────┐                   │                │
 │  │  │   Camofox    │  browser + REST   │                │
 │  │  │  (Docker)    │  JS, click, eval  │                │
