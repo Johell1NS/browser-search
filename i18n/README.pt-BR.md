@@ -213,6 +213,8 @@ browser-search não fornece arquivos docker-compose ou scripts de instalação e
 
 **Nota:** `SKILL.md` está escrita para a sintaxe do **OpenCode** (`exec`, `curl`). Se seu agente usar um formato diferente (Claude Code, Cursor, etc.), leia-a e converta os comandos para a sintaxe do seu agente antes de usar a skill.
 
+Veja [FAQ.html](https://github.com/Johell1NS/browser-search/blob/main/FAQ.html) para perguntas frequentes.
+
 ## Variáveis de ambiente
 
 | Variável | Obrigatória para | Padrão |

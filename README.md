@@ -272,6 +272,8 @@ browser-search does not provide platform-specific docker-compose files or instal
 If your agent uses a different format (Claude Code, Cursor, etc.), read it
 and convert the commands to your agent's syntax before using the skill.
 
+See [FAQ.html](FAQ.html) for frequently asked questions.
+
 ## Environment variables
 
 | Variable             | Required for                      | Default |

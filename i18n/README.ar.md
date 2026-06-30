@@ -213,6 +213,8 @@ browser-search لا يوفر ملفات docker-compose أو نصوص تثبيت 
 
 **ملاحظة:** `SKILL.md` مكتوب بناء جملة **OpenCode** (`exec`، `curl`). إذا كان وكيلك يستخدم تنسيقاً مختلفاً (Claude Code، Cursor، إلخ)، اقرأه وحوّل الأوامر إلى بناء جملة وكيلك قبل استخدام المهارة.
 
+راجع [FAQ.html](https://github.com/Johell1NS/browser-search/blob/main/FAQ.html) للأسئلة الشائعة.
+
 ## متغيرات البيئة
 
 | المتغير | مطلوب لـ | الافتراضي |
