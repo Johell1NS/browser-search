@@ -187,6 +187,8 @@ cd browser-search
 npm install
 ```
 
+CloakBrowser는 npm으로 설치됩니다. SearXNG와 Camofox는 별도의 Docker 컨테이너가 필요합니다 — 스킬을 사용하기 전에 실행 중인지 확인하세요.
+
 이 README를 AI 에이전트에 보여주면 환경과 플랫폼에 맞게 완전히 설치합니다.
 
 **서비스 개요:**
