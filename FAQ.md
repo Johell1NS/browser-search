@@ -27,14 +27,20 @@ is the hardware to run it — which can be as little as a Raspberry Pi.
 
 CloakBrowser uses `launch()` from the `cloakbrowser` npm package — a stealth
 Chromium with 58 C++ patches for anti-bot evasion (Cloudflare, Akamai,
-DataDome, etc.). It requires direct access to the GPU and rendering pipeline,
-which makes Docker impractical: you would need X11/VNC passthrough,
-`--privileged` flags, and ~4–8s startup instead of the current ~2s.
+DataDome, etc.). Both npm and the official Docker image (`cloakhq/cloakbrowser`)
+provide the same headless stealth browser — no GPU or X11 is required.
 
-CloakBrowser is also the **last resort** in the escalation chain (~10% of
-cases), designed as fire-and-forget: `launch()` → navigate → `close()`. A
-Docker wrapper would add significant overhead without real isolation benefits,
-since container escape is trivial once you pass through the display server.
+The choice of npm is pragmatic, not technical:
+
+- **CloakBrowser is the last resort** in the escalation chain (~10% of cases),
+  designed as fire-and-forget: `launch()` → navigate → `close()`. Running it
+  on-demand avoids keeping a ~200MB container idle 24/7 for marginal use.
+- **Resource-conscious design.** browser-search is built and tested on Raspberry
+  Pi — every MB counts. An always-on Docker container for a tool used once
+  every ten requests is wasteful.
+- **Users can choose Docker.** Since the official image exists, anyone on a
+  desktop or server can adapt the skill to use Docker instead of npm. The npm
+  default optimises for the RPi use case while keeping the option open.
 
 To mitigate npm risks, browser-search includes:
 
