@@ -25,12 +25,9 @@ is the hardware to run it — which can be as little as a Raspberry Pi.
 <details>
 <summary>Why is CloakBrowser installed via npm instead of Docker?</summary>
 
-CloakBrowser uses `launch()` from the `cloakbrowser` npm package — a stealth
-Chromium with 58 C++ patches for anti-bot evasion (Cloudflare, Akamai,
-DataDome, etc.). Both npm and the official Docker image (`cloakhq/cloakbrowser`)
-provide the same headless stealth browser — no GPU or X11 is required.
-
-The choice of npm is pragmatic, not technical:
+CloakBrowser is available both via npm (`cloakbrowser` package) and as an
+official Docker image (`cloakhq/cloakbrowser`). browser-search uses npm by
+default:
 
 - **CloakBrowser is the last resort** in the escalation chain (~10% of cases),
   designed as fire-and-forget: `launch()` → navigate → `close()`. Running it
