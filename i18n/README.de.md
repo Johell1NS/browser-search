@@ -169,7 +169,7 @@ Camofox bewältigt den schnellen Pfad. CloakBrowser bewältigt die Grenzfälle. 
 
 ## Installation
 
-### Schnellinstallation (nur SKILL.md)
+### Schritt 1 — Skill installieren
 
 Installieren Sie die Skill-Definition mit einem einzigen Befehl in Ihren KI-Agenten:
 
@@ -179,7 +179,7 @@ npx skills add Johell1NS/browser-search
 
 Funktioniert mit über 70 KI-Agenten, darunter OpenCode, Claude Code, Cursor, GitHub Copilot und mehr.
 
-### Vollständige Einrichtung (mit Infrastruktur)
+### Schritt 2 — Infrastruktur einrichten
 
 ```bash
 git clone https://github.com/Johell1NS/browser-search
