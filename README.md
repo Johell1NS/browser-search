@@ -330,7 +330,7 @@ Every contribution, no matter how small, makes this better.
 
 ## FAQ
 
-See [FAQ.html](FAQ.html) for frequently asked questions about installation,
+See [FAQ.md](FAQ.md) for frequently asked questions about installation,
 architecture, design decisions, and common issues.
 
 ## License

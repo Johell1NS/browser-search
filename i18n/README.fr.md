@@ -270,7 +270,7 @@ Chaque contribution, aussi petite soit-elle, rend ce projet meilleur.
 
 ## FAQ
 
-Consultez [FAQ.html](FAQ.html) pour les questions fréquentes sur l'installation, l'architecture, les choix de conception et les problèmes courants.
+Consultez [FAQ.md](FAQ.md) pour les questions fréquentes sur l'installation, l'architecture, les choix de conception et les problèmes courants.
 
 ## Licence
 

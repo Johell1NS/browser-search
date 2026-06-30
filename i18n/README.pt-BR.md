@@ -270,7 +270,7 @@ Cada contribuição, por menor que seja, torna isso melhor.
 
 ## FAQ
 
-Veja [FAQ.html](FAQ.html) para perguntas frequentes sobre instalação, arquitetura, decisões de design e problemas comuns.
+Veja [FAQ.md](FAQ.md) para perguntas frequentes sobre instalação, arquitetura, decisões de design e problemas comuns.
 
 ## Licença
 

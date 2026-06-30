@@ -270,7 +270,7 @@ Jeder Beitrag, egal wie klein, macht dies besser.
 
 ## FAQ
 
-Siehe [FAQ.html](FAQ.html) für häufig gestellte Fragen zu Installation, Architektur, Entwurfsentscheidungen und häufigen Problemen.
+Siehe [FAQ.md](FAQ.md) für häufig gestellte Fragen zu Installation, Architektur, Entwurfsentscheidungen und häufigen Problemen.
 
 ## Lizenz
 
