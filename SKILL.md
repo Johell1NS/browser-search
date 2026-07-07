@@ -293,7 +293,7 @@ docker start camofox-browser
 docker run -d --name camofox-browser --restart unless-stopped \
   -p 127.0.0.1:9377:9377 \
   --env-file .env \
-  camofox-browser:latest
+  ghcr.io/jo-inc/camofox-browser:latest
 ```
 
 ---
@@ -306,11 +306,8 @@ Uses `launch()` from the npm package `cloakbrowser`.
 Script: `<skill_dir>/scripts/cloak/cloak-fetch.mjs`
 
 ```bash
-# Simple (markdown output)
+# Simple (text output)
 exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://example.com"
-
-# Text only (no markdown header)
-exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://example.com" --format text
 
 # Raw HTML
 exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://example.com" --format html

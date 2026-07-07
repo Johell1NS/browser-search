@@ -16,11 +16,12 @@
 
 set -euo pipefail
 
-SCRIPT_NAME="$(basename "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CAMOFOX_CONTAINER="camofox-browser"
-SEARXNG_CONTAINER="searxng"
 
 PASSED=true
+SEARXNG_URL="${SEARXNG_URL:-http://127.0.0.1:8080/search}"
+CAMOFOX_URL="${CAMOFOX_URL:-http://127.0.0.1:9377}"
 
 # ── Colors ──
 RED='\033[0;31m'
@@ -35,21 +36,50 @@ fail() { echo -e "[${RED}✗${NC}] $1"; PASSED=false; }
 info() { echo -e "[${CYAN}i${NC}] $1"; }
 sep()  { echo ""; }
 
+docker_running_name() {
+    local pattern="$1"
+    docker ps --filter "status=running" --format '{{.Names}}' 2>/dev/null \
+        | grep -E "$pattern" | head -1 || true
+}
+
+searxng_api_ok() {
+    curl -sf --max-time 10 "${SEARXNG_URL}?format=json&q=health" >/dev/null 2>&1
+}
+
+camofox_api_ok() {
+    curl -sf --max-time 5 "${CAMOFOX_URL}/health" >/dev/null 2>&1
+}
+
+cloak_pkg_ok() {
+    (cd "$SCRIPT_DIR" && node -e "
+      import('cloakbrowser').then(() => process.exit(0)).catch(() => process.exit(1));
+    " 2>/dev/null)
+}
+
+cloak_version() {
+    (cd "$SCRIPT_DIR" && node -e "
+      import { createRequire } from 'module';
+      const require = createRequire(import.meta.url);
+      console.log(require('cloakbrowser/package.json').version);
+    " 2>/dev/null) || echo 'not installed'
+}
+
+cloak_binary_ok() {
+    [ -d "$HOME/.cloakbrowser" ] && \
+        find "$HOME/.cloakbrowser" -type f \( -name chrome -o -name chromium \) 2>/dev/null | grep -q .
+}
+
 show_help() {
     sed -n '3,/^$/p' "$0" | sed 's/^# \?//g'
     exit 0
 }
 
-# ── Parse args ──
 for arg in "$@"; do
     case "$arg" in
         --help) show_help ;;
     esac
 done
 
-# ─────────────────────────────────────────────────────────────────
-#  HEADER
-# ─────────────────────────────────────────────────────────────────
 echo "=================================================="
 echo "  Browser Search — Health Check"
 echo "=================================================="
@@ -57,9 +87,6 @@ echo "  $(date '+%Y-%m-%d %H:%M:%S')"
 echo "=================================================="
 echo ""
 
-# ═════════════════════════════════════════════════════════════════
-#  SECTION 1 — Docker
-# ═════════════════════════════════════════════════════════════════
 echo "─── Docker ───"
 if docker --version >/dev/null 2>&1; then
     DOCKER_VER=$(docker --version 2>/dev/null | awk '{print $3}' | tr -d ',')
@@ -70,84 +97,73 @@ else
 fi
 sep
 
-# ═════════════════════════════════════════════════════════════════
-#  SECTION 2 — SearXNG
-# ═════════════════════════════════════════════════════════════════
 echo "─── SearXNG ───"
-
-if docker ps --filter "name=$SEARXNG_CONTAINER" --filter "status=running" -q 2>/dev/null | grep -q .; then
-    HEALTH=$(curl -s --max-time 10 "http://localhost:8080/search?format=json&q=health" 2>/dev/null || echo "")
-    if [ -n "$HEALTH" ]; then
-        RESULT_COUNT=$(echo "$HEALTH" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('results',[])))" 2>/dev/null || echo "?")
-        ok "SearXNG running (:8080, ${RESULT_COUNT} results in test query)"
-    else
-        warn "SearXNG container running but API not responding on :8080"
-    fi
-elif docker ps -a --filter "name=$SEARXNG_CONTAINER" -q 2>/dev/null | grep -q .; then
+SEARXNG_NAME=$(docker_running_name 'searxng')
+if searxng_api_ok; then
+    HEALTH=$(curl -s --max-time 10 "${SEARXNG_URL}?format=json&q=health" 2>/dev/null || echo "")
+    RESULT_COUNT=$(echo "$HEALTH" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('results',[])))" 2>/dev/null || echo "?")
+    LABEL="${SEARXNG_URL}"
+    if [ -n "$SEARXNG_NAME" ]; then LABEL="$SEARXNG_NAME ($SEARXNG_URL)"; fi
+    ok "SearXNG running (${LABEL}, ${RESULT_COUNT} results in test query)"
+elif [ -n "$SEARXNG_NAME" ]; then
+    warn "SearXNG container running ($SEARXNG_NAME) but API not responding at ${SEARXNG_URL}"
+elif docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qE 'searxng'; then
     warn "SearXNG container exists but is not running"
 else
     warn "SearXNG container not found"
     info "To install: https://docs.searxng.org/admin/installation-docker.html"
+    info "Bind locally: set SEARXNG_HOST=127.0.0.1 in searxng/.env"
 fi
 sep
 
-# ═════════════════════════════════════════════════════════════════
-#  SECTION 3 — Camofox
-# ═════════════════════════════════════════════════════════════════
 echo "─── Camofox ───"
-
-if docker ps --filter "name=$CAMOFOX_CONTAINER" --filter "status=running" -q 2>/dev/null | grep -q .; then
-    HEALTH=$(curl -s --max-time 5 http://localhost:9377/health 2>/dev/null || echo "")
-    if [ -n "$HEALTH" ]; then
-        BROWSER_OK=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('browserConnected','?'))" 2>/dev/null || echo "?")
-        TAB_COUNT=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('activeTabs','?'))" 2>/dev/null || echo "?")
-        ok "Camofox running (:9377, browserConnected: ${BROWSER_OK}, tabs: ${TAB_COUNT})"
-    else
-        warn "Camofox container running but API not responding on :9377"
-    fi
-elif docker ps -a --filter "name=$CAMOFOX_CONTAINER" -q 2>/dev/null | grep -q .; then
+CAMOFOX_NAME=$(docker_running_name 'camofox')
+if camofox_api_ok; then
+    HEALTH=$(curl -s --max-time 5 "${CAMOFOX_URL}/health" 2>/dev/null || echo "")
+    BROWSER_OK=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('browserConnected','?'))" 2>/dev/null || echo "?")
+    TAB_COUNT=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('activeTabs','?'))" 2>/dev/null || echo "?")
+    LABEL="${CAMOFOX_URL}"
+    if [ -n "$CAMOFOX_NAME" ]; then LABEL="$CAMOFOX_NAME ($CAMOFOX_URL)"; fi
+    ok "Camofox running (${LABEL}, browserConnected: ${BROWSER_OK}, tabs: ${TAB_COUNT})"
+elif [ -n "$CAMOFOX_NAME" ]; then
+    warn "Camofox container running ($CAMOFOX_NAME) but API not responding at ${CAMOFOX_URL}"
+elif docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qE 'camofox'; then
     warn "Camofox container exists but is not running"
 else
     warn "Camofox container not found"
-    info "Camofox — see https://github.com/jo-inc/camofox-browser"
+    info "Image: ghcr.io/jo-inc/camofox-browser:latest"
+    info "See docker/setup.md"
 fi
 sep
 
-# ═════════════════════════════════════════════════════════════════
-#  SECTION 4 — CloakBrowser
-# ═════════════════════════════════════════════════════════════════
 echo "─── CloakBrowser ───"
-
-if node -e "require('cloakbrowser')" 2>/dev/null; then
-    ok "cloakbrowser npm package installed"
+if cloak_pkg_ok; then
+    ok "cloakbrowser npm package installed ($(cloak_version))"
 else
     fail "cloakbrowser not installed"
-    info "Run: npm install"
+    info "Run: npm install (from repo root)"
 fi
 
-if [ -d "$HOME/.cloakbrowser" ] && ls "$HOME/.cloakbrowser/"*.desktop 2>/dev/null | grep -q .; then
+if cloak_binary_ok; then
     ok "Chromium binary present (~/.cloakbrowser/)"
 elif [ -d "$HOME/.cloakbrowser" ]; then
-    warn "~/.cloakbrowser/ exists but no binary found"
+    warn "~/.cloakbrowser/ exists but chrome binary not found yet"
 else
-    warn "~/.cloakbrowser/ not found (binary will be downloaded on first run)"
+    warn "~/.cloakbrowser/ not found (binary downloads on first cloak-fetch run)"
 fi
 sep
 
-# ═════════════════════════════════════════════════════════════════
-#  SUMMARY
-# ═════════════════════════════════════════════════════════════════
 echo "=================================================="
 echo "  Summary"
 echo "=================================================="
 echo ""
 
-SEARXNG_STATUS=$(docker ps --filter "name=$SEARXNG_CONTAINER" --filter "status=running" -q 2>/dev/null | grep -q . && echo "running" || echo "stopped/missing")
-CAMO_STATUS=$(docker ps --filter "name=$CAMOFOX_CONTAINER" --filter "status=running" -q 2>/dev/null | grep -q . && echo "running" || echo "stopped/missing")
+if searxng_api_ok; then SEARXNG_STATUS="running"; else SEARXNG_STATUS="stopped/missing"; fi
+if camofox_api_ok; then CAMO_STATUS="running"; else CAMO_STATUS="stopped/missing"; fi
 
-echo "  SearXNG:    ${SEARXNG_STATUS}"
-echo "  Camofox:    ${CAMO_STATUS}"
-echo "  CloakBrowser: $(node -e "console.log(require('cloakbrowser/package.json').version)" 2>/dev/null || echo 'not installed')"
+echo "  SearXNG:      ${SEARXNG_STATUS}"
+echo "  Camofox:      ${CAMO_STATUS}"
+echo "  CloakBrowser: $(cloak_version)"
 echo ""
 
 if [ "$PASSED" = true ]; then
