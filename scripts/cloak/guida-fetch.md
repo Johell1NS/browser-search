@@ -18,14 +18,11 @@ All based on `launch()` from `cloakbrowser` (official API). Humanization works n
 For 90% of sites. Navigates, detects challenges, scrolls, extracts content.
 
 ```bash
-# Simple (markdown output)
+# Simple (text output)
 node "<skill_dir>/scripts/cloak/cloak-fetch.mjs" "https://example.com"
 
 # Raw HTML
 node "<skill_dir>/scripts/cloak/cloak-fetch.mjs" "https://example.com" --format html
-
-# Text only
-node "<skill_dir>/scripts/cloak/cloak-fetch.mjs" "https://example.com" --format text
 
 # With scroll for lazy loading
 node "<skill_dir>/scripts/cloak/cloak-fetch.mjs" "https://ebay.com/..." --scroll
