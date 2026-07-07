@@ -14,7 +14,7 @@ function help() {
 Usage: node cloak-fetch.mjs <url> [options]
 
 Content:
-  --format <fmt>        Output format: markdown (default), text, html
+  --format <fmt>        Output format: text (default), html
   --max-chars <n>       Truncate output to n chars (default: 100000)
 
 Interaction:
@@ -72,7 +72,7 @@ function parseArgs() {
 
   const opts = {
     url: null,
-    format: 'markdown',
+    format: 'text',
     maxChars: 100000,
     scroll: has('--scroll'),
     wait: 1000,

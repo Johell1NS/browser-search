@@ -187,6 +187,9 @@ For example, you can tell your agent: *"Use port 8888 for SearXNG and
 
 Default ports are `8080` (SearXNG) and `9377` (Camofox).
 
+For SearXNG Docker, set `SEARXNG_HOST=127.0.0.1` in `searxng/.env` so the
+search API is not exposed on `0.0.0.0` (see [SearXNG docker docs](https://docs.searxng.org/admin/installation-docker.html)).
+
 </details>
 
 ---

@@ -8,10 +8,10 @@ Containers are configured to start automatically on boot (`--restart unless-stop
 ```bash
 # SearXNG (via docker-compose)
 # Follow: https://docs.searxng.org/admin/installation-docker.html
+# In searxng/.env set SEARXNG_HOST=127.0.0.1 so :8080 is not exposed on 0.0.0.0
 cd <searxng-directory> && docker compose up -d
 
-# Camofox
-# Build from source or pull image, then:
+# Camofox (official GHCR image)
 # ⚠️  SECURITY: Use --env-file for API keys (never pass on command line)
 # Create .env file: echo "CAMOFOX_API_KEY=your-key" > .env
 docker start camofox-browser 2>/dev/null || docker run -d \
@@ -25,7 +25,7 @@ docker start camofox-browser 2>/dev/null || docker run -d \
   --security-opt no-new-privileges \
   -p 127.0.0.1:9377:9377 \
   --env-file .env \
-  camofox-browser:latest
+  ghcr.io/jo-inc/camofox-browser:latest
 ```
 
 ## Security Notes

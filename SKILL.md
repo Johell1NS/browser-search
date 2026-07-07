@@ -293,7 +293,7 @@ docker start camofox-browser
 docker run -d --name camofox-browser --restart unless-stopped \
   -p 127.0.0.1:9377:9377 \
   --env-file .env \
-  camofox-browser:latest
+  ghcr.io/jo-inc/camofox-browser:latest
 ```
 
 ---
