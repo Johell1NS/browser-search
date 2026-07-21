@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 // Fetch any URL through CloakBrowser stealth Chromium.
 // Adapted from opencode-cloak-fetch (MIT) by PartMent
+//
+// v2.1.0 — Added per-origin persistent sessions and WebRTC IP spoofing.
 
 import { launch, launchPersistentContext } from 'cloakbrowser';
 import { detectChallenge, extractState, waitForChallenge } from './challenges.mjs';
 import { validateUrlWithDns } from './lib/url-validation.mjs';
 import { RateLimiter } from './lib/rate-limiter.mjs';
+import { acquireSession } from './lib/session.mjs';
 
-const VERSION = '2.0.0';
+const VERSION = '2.1.0';
 
 function help() {
   process.stderr.write(`
@@ -33,6 +36,7 @@ Network:
   --geoip               Auto-detect timezone/locale from proxy
   --tz <timezone>       Force timezone (e.g. Europe/Rome)
   --locale <locale>     Force locale (e.g. it-IT)
+  --webrtc-auto         Auto-spoof WebRTC IP to match proxy exit IP
 
 Behavior:
   --humanize            Human-like mouse/keyboard (default: on)
@@ -41,6 +45,7 @@ Behavior:
 
 Session:
   --persistent <dir>    Persistent profile (cookies survive restarts)
+  --session             Per-origin persistent session (auto profile per domain)
 
 Other:
   --version, --help
@@ -88,6 +93,8 @@ function parseArgs() {
     timezone: null,
     locale: null,
     persistent: null,
+    useSession: has('--session'),
+    webrtcAuto: has('--webrtc-auto'),
     json: true,
     verbose: has('--verbose'),
     noRateLimit: has('--no-rate-limit'),
@@ -141,9 +148,9 @@ async function fetchPage(opts) {
   if (opts.seed) extraArgs.push(`--fingerprint=${opts.seed}`);
   if (opts.platform) extraArgs.push(`--fingerprint-platform=${opts.platform}`);
   if (opts.brand) extraArgs.push(`--fingerprint-brand=${opts.brand}`);
+  if (opts.webrtcAuto) extraArgs.push(`--fingerprint-webrtc-ip=auto`);
   if (extraArgs.length > 0) launchOpts.args = extraArgs;
 
-  // SSRF protection — validate URL before navigation (bypass with --unsafe)
   if (!opts.unsafe) {
     const urlCheck = await validateUrlWithDns(opts.url);
     if (!urlCheck.valid) {
@@ -151,6 +158,7 @@ async function fetchPage(opts) {
     }
   }
 
+  let session = null;
   let browser = null;
   let context = null;
   let page = null;
@@ -160,6 +168,16 @@ async function fetchPage(opts) {
   try {
     if (opts.persistent) {
       context = await launchPersistentContext({ userDataDir: opts.persistent, ...launchOpts });
+      const pages = context.pages();
+      page = pages[0] || await context.newPage();
+    } else if (opts.useSession) {
+      session = await acquireSession(opts.url);
+      process.stderr.write(JSON.stringify({
+        session: 'acquired',
+        origin: session.origin,
+        userDataDir: session.userDataDir,
+      }) + '\n');
+      context = await launchPersistentContext({ userDataDir: session.userDataDir, ...launchOpts });
       const pages = context.pages();
       page = pages[0] || await context.newPage();
     } else {
@@ -218,13 +236,17 @@ async function fetchPage(opts) {
       challengeResolved: challenge.resolved,
       retries: 0,
       elapsedMs: Date.now() - start,
+      ...(session ? { sessionOrigin: session.origin } : {}),
     };
 
     return result;
   } finally {
-    if (page && !opts.persistent) await page.close().catch(() => {});
+    if (page && !opts.persistent && !session) await page.close().catch(() => {});
     if (context) await context.close().catch(() => {});
     if (browser) await browser.close().catch(() => {});
+    if (session) await session.release().catch(() => {
+      process.stderr.write(JSON.stringify({ warning: 'Failed to release session lock' }) + '\n');
+    });
   }
 }
 
@@ -232,7 +254,6 @@ async function main() {
   const opts = parseArgs();
   const maxRetries = Math.max(0, opts.retry || 0);
 
-  // Rate limiting
   if (!opts.noRateLimit) {
     const limiter = new RateLimiter();
     await limiter.acquire();

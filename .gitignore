@@ -30,3 +30,6 @@ Thumbs.db
 
 # Rate limiter state
 ~/.browser-search/rate-state.json
+
+# Development workspace (test scripts, temp fixtures)
+scripts/cloak/test/

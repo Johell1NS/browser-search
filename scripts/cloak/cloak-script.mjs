@@ -2,6 +2,8 @@
 // Execute a custom Playwright script through CloakBrowser.
 // Script receives { page, browser, context }, uses Playwright API directly.
 // Follows the official CloakBrowser pattern: launch() + Playwright API.
+//
+// v1.1.0 — Added per-origin sessions, WebRTC IP spoofing.
 
 import { launch, launchPersistentContext } from 'cloakbrowser';
 import { resolve, dirname, sep } from 'path';
@@ -9,8 +11,8 @@ import { fileURLToPath } from 'url';
 import { realpath } from 'node:fs/promises';
 import { createSandbox } from './lib/sandbox.mjs';
 import { RateLimiter } from './lib/rate-limiter.mjs';
+import { acquireSession } from './lib/session.mjs';
 
-// Skill directory for path validation (repo root)
 const SKILL_DIR = resolve(dirname(dirname(dirname(fileURLToPath(import.meta.url)))));
 
 function help() {
@@ -31,6 +33,8 @@ Launch options (same as cloak-fetch):
   --tz <timezone>       Force timezone
   --locale <locale>     Force locale
   --persistent <dir>    Persistent profile
+  --session             Per-origin persistent session (auto profile per domain)
+  --webrtc-auto         Auto-spoof WebRTC IP to match proxy exit IP
   --timeout <ms>        Browser launch timeout (default: 30000)
 
 Other:
@@ -52,7 +56,7 @@ Script example:
 function parseArgs() {
   const args = process.argv.slice(2);
   if (args.includes('--help')) { help(); process.exit(0); }
-  if (args.includes('--version')) { process.stderr.write(JSON.stringify({ tool: 'cloak-script', version: '1.0.0' }) + '\n'); process.exit(0); }
+  if (args.includes('--version')) { process.stderr.write(JSON.stringify({ tool: 'cloak-script', version: '1.1.0' }) + '\n'); process.exit(0); }
 
   const idx = f => { const i = args.indexOf(f); return i >= 0 && i + 1 < args.length ? i : -1; };
   const has = f => args.includes(f);
@@ -72,6 +76,8 @@ function parseArgs() {
     timezone: null,
     locale: null,
     persistent: null,
+    useSession: has('--session'),
+    webrtcAuto: has('--webrtc-auto'),
     timeout: 30000,
     unsafe: has('--unsafe'),
     verbose: has('--verbose'),
@@ -97,13 +103,11 @@ function parseArgs() {
 async function main() {
   const opts = parseArgs();
 
-  // Path traversal protection — resolve symlinks before checking
   if (!opts.unsafe) {
     let realScriptPath;
     try {
       realScriptPath = await realpath(opts.script);
     } catch {
-      // File doesn't exist yet — fall back to resolved path
       realScriptPath = opts.script;
     }
     if (realScriptPath !== SKILL_DIR && !realScriptPath.startsWith(SKILL_DIR + sep)) {
@@ -113,7 +117,6 @@ async function main() {
     }
   }
 
-  // Rate limiting
   if (!opts.noRateLimit) {
     const limiter = new RateLimiter();
     await limiter.acquire();
@@ -132,8 +135,10 @@ async function main() {
   if (opts.seed) extraArgs.push(`--fingerprint=${opts.seed}`);
   if (opts.platform) extraArgs.push(`--fingerprint-platform=${opts.platform}`);
   if (opts.brand) extraArgs.push(`--fingerprint-brand=${opts.brand}`);
+  if (opts.webrtcAuto) extraArgs.push(`--fingerprint-webrtc-ip=auto`);
   if (extraArgs.length > 0) launchOpts.args = extraArgs;
 
+  let session = null;
   let browser = null;
   let context = null;
   let page = null;
@@ -147,13 +152,26 @@ async function main() {
       context = await launchPersistentContext({ userDataDir: opts.persistent, ...launchOpts });
       const pages = context.pages();
       page = pages[0] || await context.newPage();
+    } else if (opts.useSession) {
+      const scriptContent = await import('node:fs').then(fs => fs.default.readFileSync(opts.script, 'utf8'));
+      const urlMatch = scriptContent.match(/['"]https?:\/\/[^'"]+['"]/);
+      const sessionUrl = urlMatch ? urlMatch[0].replace(/['"]/g, '') : 'https://example.com';
+
+      session = await acquireSession(sessionUrl);
+      process.stderr.write(JSON.stringify({
+        session: 'acquired',
+        origin: session.origin,
+        userDataDir: session.userDataDir,
+      }) + '\n');
+      context = await launchPersistentContext({ userDataDir: session.userDataDir, ...launchOpts });
+      const pages = context.pages();
+      page = pages[0] || await context.newPage();
     } else {
       browser = await launch(launchOpts);
       context = await browser.newContext();
       page = await context.newPage();
     }
 
-    // Sandbox — restrict API surface unless --unsafe
     const api = opts.unsafe
       ? { page, browser, context }
       : createSandbox({ page, browser, context });
@@ -167,9 +185,12 @@ async function main() {
     process.stderr.write(JSON.stringify(errObj) + '\n');
     process.exit(1);
   } finally {
-    if (page && !opts.persistent) await page.close().catch(() => {});
+    if (page && !opts.persistent && !session) await page.close().catch(() => {});
     if (context) await context.close().catch(() => {});
     if (browser) await browser.close().catch(() => {});
+    if (session) await session.release().catch(() => {
+      process.stderr.write(JSON.stringify({ warning: 'Failed to release session lock' }) + '\n');
+    });
   }
 }
 
