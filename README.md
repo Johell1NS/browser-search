@@ -13,15 +13,15 @@
 
 ## Why it exists
 
-browser-search is a SKILL — an instruction set for AI agents like OpenCode,
+browser-search is a **SKILL** — an instruction set for AI agents like OpenCode,
 Claude Code, Cursor, OpenClaw and others. It teaches your agent how to
 search and browse the web using three orchestrated open source tools.
 
-Today an AI agent browsing the web is like a thief in a balaclava sneaking
+Today an AI agent browsing the web is like a **thief in a balaclava** sneaking
 around a police academy. The site protections block it, challenge it, reject it.
 
-browser-search flips the situation: your agent stops being the thief and
-becomes the chief of police. No more clumsy access attempts. It walks through
+👮 browser-search flips the situation: your agent stops being the thief and
+becomes the **chief of police**. No more clumsy access attempts. It walks through
 every door because it has the right tools. SearXNG to search, Camofox to browse,
 CloakBrowser when the site plays hardball.
 

@@ -8,11 +8,11 @@
 
 ## Perché esiste
 
-browser-search è una SKILL — un insieme di istruzioni per agenti AI come OpenCode, Claude Code, Cursor, OpenClaw e altri. Insegna al tuo agente come cercare e navigare sul web usando tre strumenti open source orchestrati.
+browser-search è una **SKILL** — un insieme di istruzioni per agenti AI come OpenCode, Claude Code, Cursor, OpenClaw e altri. Insegna al tuo agente come cercare e navigare sul web usando tre strumenti open source orchestrati.
 
-Oggi un agente AI che cerca di navigare il web è come un ladro con il passamontagna che si aggira in una scuola di polizia. Le protezioni dei siti lo bloccano, lo sfidano, lo respingono.
+Oggi un agente AI che cerca di navigare il web è come un **ladro con il passamontagna** che si aggira in una scuola di polizia. Le protezioni dei siti lo bloccano, lo sfidano, lo respingono.
 
-browser-search ribalta la situazione: il tuo agente smette di essere il ladro e diventa il capo della polizia. Niente più tentativi goffi di accesso. Attraversa ogni porta perché ha gli strumenti giusti. SearXNG per le ricerche, Camofox per navigare, CloakBrowser quando il gioco si fa duro.
+👮 browser-search ribalta la situazione: il tuo agente smette di essere il ladro e diventa il **capo della polizia**. Niente più tentativi goffi di accesso. Attraversa ogni porta perché ha gli strumenti giusti. SearXNG per le ricerche, Camofox per navigare, CloakBrowser quando il gioco si fa duro.
 
 La skill impone l'uso esclusivo di script deterministici. Questo azzera le allucinazioni del modello, anche con i modelli più economici. La skill descrive i 3 strumenti in linguaggio naturale, ma l'esecuzione è rigida: il modello non può sbagliare né il comando da lanciare né come interpretare l'output. Il risultato è un successo garantito su ogni query: la skill e gli script deterministici guidano il modello a scandagliare la rete fino a trovare la risposta.
 
