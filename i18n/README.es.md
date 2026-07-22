@@ -10,7 +10,9 @@
 
 browser-search es una SKILL — un conjunto de instrucciones para agentes de IA como OpenCode, Claude Code, Cursor, OpenClaw y otros. Enseña a tu agente cómo buscar y navegar por la web utilizando tres herramientas open source orquestadas.
 
-¿El problema? La web es hostil a la automatización. Cloudflare, Akamai, DataDome y otros sistemas anti-bot bloquean las solicitudes simples. Los sitios modernos usan JavaScript pesado, carga diferida y renderizado del lado del cliente. Una sola solución no es suficiente.
+Hoy en día, un agente de IA que intenta navegar la web es como un ladrón con pasamontañas merodeando en una academia de policía. Las protecciones del sitio lo bloquean, lo desafían, lo rechazan.
+
+browser-search da la vuelta a la situación: tu agente deja de ser el ladrón y se convierte en el jefe de policía. No más intentos torpes de acceso. Atraviesa cada puerta porque tiene las herramientas adecuadas. SearXNG para buscar, Camofox para navegar, CloakBrowser cuando el juego se pone difícil.
 
 `browser-search` orquesta **tres herramientas open source** en un único sistema de búsqueda y navegación diseñado para agentes de IA. Cada herramienta tiene su rol, orquestada por la skill con lógica de escalado, selección automática e integración lista para usar:
 
