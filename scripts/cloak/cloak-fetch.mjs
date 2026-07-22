@@ -9,6 +9,7 @@ import { detectChallenge, extractState, waitForChallenge } from './challenges.mj
 import { validateUrlWithDns } from './lib/url-validation.mjs';
 import { RateLimiter } from './lib/rate-limiter.mjs';
 import { acquireSession } from './lib/session.mjs';
+import { execFile } from 'node:child_process';
 
 const VERSION = '2.1.0';
 
@@ -222,6 +223,17 @@ async function fetchPage(opts) {
     let content;
     if (opts.format === 'html') {
       content = await page.content();
+    } else if (opts.format === 'markdown') {
+      const html = await page.content();
+      content = await new Promise((resolve, reject) => {
+        execFile('markitdown', ['-x', 'html'], {
+          input: html,
+          maxBuffer: 50 * 1024 * 1024,
+          timeout: 45000,
+        }, (err, stdout) => err ? reject(err) : resolve(stdout));
+      }).catch(async () => {
+        return await page.evaluate(() => document.body?.innerText || '');
+      });
     } else {
       content = await page.evaluate(() => document.body?.innerText || '').catch(() => '');
     }

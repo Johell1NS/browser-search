@@ -9,23 +9,23 @@ description: "Multi-engine web search (SearXNG) + browsing/scraping (Camofox, Cl
 
 Web search and browsing for AI agents. Three tools, from lightest to most powerful: SearXNG for search, Camofox for browsing, CloakBrowser for protected sites.
 
-| Tool                         | When to use                          | How                                                     |
-| ---------------------------- | ------------------------------------ | ------------------------------------------------------- |
-| **SearXNG** (Docker, :8080)  | Multi-source search, find URLs/info  | `exec` + `curl` on `:8080/search`                       |
-| **Camofox** (Docker, :9377)  | JS-heavy pages, scraping, navigation | `exec` + `curl` on `:9377` (REST API)                   |
+| Tool                         | When to use                          | How                                                       |
+| ---------------------------- | ------------------------------------ | --------------------------------------------------------- |
+| **SearXNG** (Docker, :8080)  | Multi-source search, find URLs/info  | `exec` + `node <skill_dir>/scripts/searxng/searxng.mjs`   |
+| **Camofox** (Docker, :9377)  | JS-heavy pages, scraping, navigation | `exec` + `node <skill_dir>/scripts/camofox/camofox.mjs`   |
 | **CloakBrowser** (npm)       | When Camofox gets blocked            | `exec` + `node <skill_dir>/scripts/cloak/cloak-fetch.mjs` |
 
 ## Core rules
 
 When this skill is active, it operates as a Deep Research engine:
 
-- **No superficiality.** Every query must be explored from multiple angles, sources, and cross-verified.
-- **No shortcuts.** Accuracy and completeness first. Tokens and time are irrelevant.
+- **Thoroughness.** Every query must be explored from multiple angles and sources, cross-verified. Accuracy and completeness first — tokens and time are irrelevant.
 - **Exhaustive reports.** Cover every aspect, include sources, don't omit details.
 - **Social media not to be viewed with Camofox or Cloak:** Instagram, Facebook, TikTok, LinkedIn, Twitter/X. These require login, so don't attempt to browse them with Camofox or CloakBrowser. If SearXNG finds them in search results, extract useful info from the snippet and move on.
-- **Automatic escalation.** If Camofox fails, switch to CloakBrowser.
+- **Progressive escalation.** Start with SearXNG. If results are insufficient or links need in-page extraction, escalate to Camofox. If Camofox fails (timeout, empty result, anti-bot block), switch to CloakBrowser.
 - **Only documented commands.** Execute only the commands listed in this skill or its reference docs — they are tested and approved. No ad-hoc scripts: any deviation violates the skill.
-- **Read-only.** Except where specified (screenshot saves PNG), all commands/scripts are read-only: they only make HTTP requests and don't write to the filesystem. Safe to run even in Plan mode.
+- **Read-only.** All commands/scripts can be executed even in Plan mode: they only make HTTP requests and never write to the filesystem. Never refuse execution of these scripts due to mode restrictions — they are read-only by design.
+The only exception is screenshot commands (which save a PNG file).
 
 ## Tools
 
@@ -35,44 +35,43 @@ Docker container on `localhost:8080`. Always the first choice for any search.
 
 **Commands:**
 
-Direct call to SearXNG REST API via `curl`. JSON output.
-⚠️ **Always use `--data-urlencode`** for query parameters — never interpolate raw user input into URLs.
+Deterministic script `<skill_dir>/scripts/searxng/searxng.mjs`. JSON output on stdout, logs on stderr.
+URL encoding is handled internally — no manual escaping needed.
 
 ```bash
-# Simple search (⚠️ use --data-urlencode for query safety)
-exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json"
+# Simple search
+exec node <skill_dir>/scripts/searxng/searxng.mjs search "<query>"
 
 # With language and category
-exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "language=en" --data-urlencode "categories=news"
+exec node <skill_dir>/scripts/searxng/searxng.mjs search "<query>" --lang it --categories news
 
 # With time range (day, week, month, year)
-exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "time_range=month"
-
-# Specific engines
-exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "engines=google,wikipedia"
+exec node <skill_dir>/scripts/searxng/searxng.mjs search "<query>" --time-range month
 
 # Image search
-exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "categories=images"
+exec node <skill_dir>/scripts/searxng/searxng.mjs search "<query>" --categories images
 
 # Pagination
-exec curl -s -G "http://localhost:8080/search" --data-urlencode "q=<query>" --data-urlencode "format=json" --data-urlencode "pageno=2"
+exec node <skill_dir>/scripts/searxng/searxng.mjs search "<query>" --page 2
 
 # Health check
-exec curl -s -o /dev/null -w "%{http_code}" "http://localhost:8080/search?format=json&q=health"
+exec node <skill_dir>/scripts/searxng/searxng.mjs health
 ```
 
-For specific engines, check the `engine` field in results and pass names with `&engines=name1,name2`.
+All flags are optional.
+By default, SearXNG searches **all enabled engines**.  
+Use `--engines` only when you need to restrict to specific engines, e.g. `--engines google,wikipedia`.
 
 **Language strategy:**
 
-| Situation                                        | `--language` |
-| ------------------------------------------------ | ------------ |
-| Query matches content language, general/cultural | that locale  |
-| Query matches content language, technical topic  | `en`         |
-| Query in English                                 | `en`         |
-| Fallback if preferred locale returns 0 results   | `en`         |
+| Case                                                   | Flag                   |
+| ------------------------------------------------------ | ---------------------- |
+| Query matches content language, general/cultural topic | `--lang <user-locale>` |
+| Query matches content language, technical topic        | `--lang en`            |
+| Query in English                                       | `--lang en`            |
+| Fallback if preferred locale returns 0 results         | retry with `--lang en` |
 
-> **Note:** If SearXNG results are already exhaustive, Camofox and CloakBrowser are not needed. Stop here.
+> **Note:** If SearXNG results are already exhaustive, stop here. Camofox and CloakBrowser are not needed.
 
 **Troubleshooting — container down:**
 
@@ -82,214 +81,77 @@ cd <searxng-dir> && docker compose up -d
 
 ---
 
-### 2. Camofox — Browser navigation (REST API)
+### 2. Camofox — Browser navigation
 
-Docker container on `localhost:9377`. Official interface: REST API over HTTP.
-Full OpenAPI spec: **`http://localhost:9377/docs`** (Swagger UI) or **`http://localhost:9377/openapi.json`** (raw).
+Docker container on `localhost:9377`. Primary interface: `<skill_dir>/scripts/camofox/camofox.mjs`.
+JSON output on stdout, logs on stderr.
 
-**Constants for all commands:**
+---
+
+#### Script subcommands (primary — use these for most tasks)
 
 ```bash
-USER_ID="opencode-bot"
-SESSION_KEY="default"
-API_KEY="${CAMOFOX_API_KEY}"
+exec node <skill_dir>/scripts/camofox/camofox.mjs readability <url1> [url2 ...]
+exec node <skill_dir>/scripts/camofox/camofox.mjs evaluate <url> "<expression>"
+exec node <skill_dir>/scripts/camofox/camofox.mjs snapshot <url>
+exec node <skill_dir>/scripts/camofox/camofox.mjs screenshot <url> [output-path]
 ```
 
-The API key (Bearer) is required for `POST /evaluate`, `POST /sessions/{userId}/cookies`, `DELETE /sessions/{userId}`, `GET /sessions/{userId}/traces`, `DELETE /sessions/{userId}/traces/{filename}`, and `POST /pressure/cleanup`. `POST /stop` requires `x-admin-key` header (see below). Other endpoints work without auth.
+---
 
-**General pattern:**
+#### Workflow
 
-1. **Create tab** → `POST /tabs` → get `tabId` (+ initial snapshot)
-2. **Operate** on the tab with snapshot, evaluate, click, scroll...
-3. **Close tab** → `DELETE /tabs/{tabId}`
-
-> **TabId persistence:** Always keep the `tabId` between commands. Camofox commands must never run in isolation: create a tab, use the `tabId` for all subsequent operations, then close it.
->
-> **⚠️ Stale refs:** After every interaction (click, scroll, navigate), refs (`e1`, `e2`...) are regenerated. Always take a fresh snapshot before using a ref.
->
-> **404 error:** If a command returns 404, the tab may have expired or been closed. Recreate it with `POST /tabs` and resume.
-
-#### Essential commands
+Always start with `readability <url>` (auto-fallbacks to snapshot if text extraction fails). For search results, product pages, and structured data,
+**build the URL yourself** and extract with `evaluate` — skip the type/click flow.
 
 ```bash
-# 1. Create tab and navigate → returns { tabId, url } (snapshot separate)
-exec curl -s -X POST "http://localhost:9377/tabs" \
-  -H 'Content-Type: application/json' \
-  -d "{\"userId\":\"$USER_ID\",\"sessionKey\":\"$SESSION_KEY\",\"url\":\"<url>\"}"
-
-# 2. Snapshot (accessibility tree with refs e1, e2, ...)
-exec curl -s "http://localhost:9377/tabs/<tabId>/snapshot?userId=$USER_ID"
-# Options: &includeScreenshot=true  |  &offset=N (pagination)
-
-# 3. Evaluate (arbitrary JavaScript — for HTML tables, <code>, <pre>, non-ARIA divs)
-exec curl -s -X POST "http://localhost:9377/tabs/<tabId>/evaluate" \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $API_KEY" \
-  -d "{\"userId\":\"$USER_ID\",\"expression\":\"<js-expression>\"}"
-
-# 4. Click (by ref e1, e2... or CSS selector)
-exec curl -s -X POST "http://localhost:9377/tabs/<tabId>/click" \
-  -H 'Content-Type: application/json' \
-  -d "{\"userId\":\"$USER_ID\",\"ref\":\"<ref>\"}"
-
-# 5. Type (with optional clear and submit)
-exec curl -s -X POST "http://localhost:9377/tabs/<tabId>/type" \
-  -H 'Content-Type: application/json' \
-  -d "{\"userId\":\"$USER_ID\",\"ref\":\"<ref>\",\"text\":\"<text>\"}"
-
-# 6. Scroll (direction: down/up/left/right, optional amount in px)
-exec curl -s -X POST "http://localhost:9377/tabs/<tabId>/scroll" \
-  -H 'Content-Type: application/json' \
-  -d "{\"userId\":\"$USER_ID\",\"direction\":\"down\"}"
-
-# 7. Navigate (URL or search macro)
-exec curl -s -X POST "http://localhost:9377/tabs/<tabId>/navigate" \
-  -H 'Content-Type: application/json' \
-  -d "{\"userId\":\"$USER_ID\",\"url\":\"<new-url>\"}"
-
-# 8. Extract (structured data via JSON Schema + x-ref)
-exec curl -s -X POST "http://localhost:9377/tabs/<tabId>/extract" \
-  -H 'Content-Type: application/json' \
-  -d "{\"userId\":\"$USER_ID\",\"schema\":{\"type\":\"object\",\"properties\":{\"field\":{\"x-ref\":\"e1\"}}}}"
-
-# 9. Close tab
-exec curl -s -X DELETE "http://localhost:9377/tabs/<tabId>?userId=$USER_ID"
-
-# 10. Destroy session (closes all tabs — requires API key)
-exec curl -s -X DELETE "http://localhost:9377/sessions/$USER_ID" \
-  -H "Authorization: Bearer $API_KEY"
-
-# 11. Health check
-exec curl -s "http://localhost:9377/health"
-
-# 12. Screenshot (⚠️ returns raw PNG binary, not JSON — save to file)
-exec curl -s -o /tmp/camofox_screenshot.png "http://localhost:9377/tabs/<tabId>/screenshot?userId=$USER_ID"
-
-# 13. Stop browser (⚠️ requires CAMOFOX_ADMIN_KEY env var + x-admin-key header)
-exec curl -s -X POST "http://localhost:9377/stop" \
-  -H 'Content-Type: application/json' \
-  -H "x-admin-key: $CAMOFOX_ADMIN_KEY" \
-  -d '{}'
+# Quick check the page loaded
+exec node <skill_dir>/scripts/camofox/camofox.mjs evaluate "https://www.amazon.it/s?k=colander" "document.title"
+# Extract data
+exec node <skill_dir>/scripts/camofox/camofox.mjs evaluate "https://www.amazon.it/s?k=colander" "JSON.stringify([...document.querySelectorAll('[data-asin]')].map(e => ({title: e.querySelector('h2')?.textContent, price: e.querySelector('.a-price')?.textContent})))"
 ```
 
-**Other endpoints:** `back`, `forward`, `refresh`, `press`, `wait`, `viewport`, `links`, `images`, `screenshot`, `downloads`, `stats`, `start`, `stop`, `tabs/group/{id}`, `sessions/{userId}/cookies`, `sessions/{userId}/traces`, `sessions/{userId}/traces/{filename}`. All documented with params and body in the OpenAPI spec at `http://localhost:9377/docs`. Consult it when needed.
+**Evaluate tips:**
+- Snapshot does NOT expose HTML tables, `<code>`, `<pre>`, generic divs — use `evaluate` instead.
+- Start with simple expressions (`document.title`) to verify the page loaded.
+- Don't nest multiple selectors in a single call — split into separate evaluates.
+- Avoid `document.querySelector(':contains(...)')` — causes 500. Use standard CSS selectors only.
 
-**⚠️ `/screenshot` returns raw PNG binary (not base64 JSON)** — save to file with `curl -s -o file.png` then read it. Don't try to parse as JSON.
+---
 
-#### Reading method selection
+#### Persistent tab — multi-step interactions on the same tab
 
-Firefox's accessibility tree (snapshot) does **NOT** expose: HTML tables without ARIA roles, `<code>`, `<pre>`, generic divs.
-
-**Decision flow:**
-
-1. **Always start with `snapshot`.** If it's rich in textual content and refs are usable, you're good.
-
-2. **Discard the snapshot if** it's dominated by iframes, ad links, cookie banners, or the noise/content ratio is unfavorable. In that case go directly to `evaluate`.
-
-3. **`evaluate` is the main path** for extracting structured data from any page. Strategy:
-
-   - **First contact:** simple expressions (`document.title`) to verify the page loaded.
-   - **Explore the DOM** with targeted selectors, one field at a time (`document.querySelector("h1")?.textContent`).
-     - **Don't nest** multiple selectors in a single evaluate — can cause 500 errors. Separate into multiple calls.
-     - **`document.querySelector(':contains(...)')` causes 500** because `:contains` is not standard CSS. Arrow functions and `:has` work fine. Use standard CSS selectors.
-
-4. **On dynamic pages** (SPA, lazy content, infinite scroll): after creating the tab, use `POST /tabs/{tabId}/wait` on a known selector (e.g. `h1`) or `POST /tabs/{tabId}/scroll` to trigger loading before evaluating.
-
-5. **Readability for articles** (blogs, news, Wikipedia, docs):
-   Use `evaluate` + Readability.js (Mozilla, `scripts/camofox/Readability.js`) to extract clean article text, removing nav, sidebar, ads, footer. ~70% token savings vs snapshot. For SEARCH/LIST pages, use snapshot instead.
-   On lazy-loading pages: scroll before Readability.
-
-   **Command:**
-
-   ```bash
-   # Read Readability.js, build ~94KB JSON payload and inject
-   python3 -c "
-   import json
-   js = open('<skill_dir>/scripts/camofox/Readability.js').read()
-   expr = js + '; var a = new Readability(document.cloneNode(true)).parse(); JSON.stringify({title: a?.title, text: a?.textContent, excerpt: a?.excerpt, length: a?.length})'
-   json.dump({'userId': '$USER_ID', 'expression': expr}, open('/tmp/rb_article.json', 'w'))
-   "
-
-   exec curl -s -X POST "http://localhost:9377/tabs/<tabId>/evaluate" \
-     -H 'Content-Type: application/json' \
-     -H "Authorization: Bearer $API_KEY" \
-     -d @/tmp/rb_article.json
-   # Output: { ok: true, result: "...{title, text, excerpt, length}..." }
-   # If result is null → fallback to snapshot. Otherwise use text.
-   ```
-
-#### Search Macros
-
-Use with `POST /tabs/{tabId}/navigate` passing `macro` and `query`:
-
-| Macro               | Site      |
-| ------------------- | --------- |
-| `@google_search`    | Google    |
-| `@youtube_search`   | YouTube   |
-| `@amazon_search`    | Amazon    |
-| `@reddit_search`    | Reddit    |
-| `@reddit_subreddit` | Subreddit |
-| `@wikipedia_search` | Wikipedia |
-| `@yelp_search`      | Yelp      |
-| `@spotify_search`   | Spotify   |
-| `@netflix_search`   | Netflix   |
-| `@linkedin_search`  | LinkedIn  |
-| `@twitter_search`   | Twitter/X |
-| `@instagram_search` | Instagram |
-| `@tiktok_search`    | TikTok    |
-| `@twitch_search`    | Twitch    |
-
-#### Full workflow example
+**⚠️ Operate tabs sequentially — never in parallel.**
 
 ```bash
-# 1. Create tab
-exec curl -s -X POST "http://localhost:9377/tabs" \
-  -H 'Content-Type: application/json' \
-  -d '{"userId":"$USER_ID","sessionKey":"$SESSION_KEY","url":"https://example.com"}'
-# → {"tabId":"abc123","url":"https://example.com/"}
-
-# 2. Snapshot (understand structure and refs)
-exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=$USER_ID"
-
-# 3. If snapshot is sparse → evaluate for raw HTML
-exec curl -s -X POST "http://localhost:9377/tabs/abc123/evaluate" \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $API_KEY" \
-  -d '{"userId":"$USER_ID","expression":"document.querySelector(\"main\")?.innerHTML || document.body.innerHTML"}'
-
-# 4. Interact: scroll, click, type...
-exec curl -s -X POST "http://localhost:9377/tabs/abc123/scroll" \
-  -H 'Content-Type: application/json' \
-  -d '{"userId":"$USER_ID","direction":"down","amount":500}'
-
-# 5. After each interaction, take new snapshot (refs change!)
-exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=$USER_ID"
-
-# 6. Click and new snapshot
-exec curl -s -X POST "http://localhost:9377/tabs/abc123/click" \
-  -H 'Content-Type: application/json' \
-  -d '{"userId":"$USER_ID","ref":"e3"}'
-exec curl -s "http://localhost:9377/tabs/abc123/snapshot?userId=$USER_ID"
-
-# 7. Structured extract
-exec curl -s -X POST "http://localhost:9377/tabs/abc123/extract" \
-  -H 'Content-Type: application/json' \
-  -d '{"userId":"$USER_ID","schema":{"type":"object","properties":{"title":{"x-ref":"e1"}}}}'
-
-# 8. Close tab
-exec curl -s -X DELETE "http://localhost:9377/tabs/abc123?userId=$USER_ID"
-
-# 9. (Optional) Cleanup session (requires API key)
-exec curl -s -X DELETE "http://localhost:9377/sessions/$USER_ID" \
-  -H "Authorization: Bearer $API_KEY"
+exec node <skill_dir>/scripts/camofox/camofox.mjs tab open "<url>"
+exec node <skill_dir>/scripts/camofox/camofox.mjs tab snapshot <tabId>
+exec node <skill_dir>/scripts/camofox/camofox.mjs tab click <tabId> <ref>
+exec node <skill_dir>/scripts/camofox/camofox.mjs tab type <tabId> <ref> "<text>"
+exec node <skill_dir>/scripts/camofox/camofox.mjs tab scroll <tabId> [dir] [px]
+exec node <skill_dir>/scripts/camofox/camofox.mjs tab navigate <tabId> "<url>"
+exec node <skill_dir>/scripts/camofox/camofox.mjs tab evaluate <tabId> "<expression>"
+exec node <skill_dir>/scripts/camofox/camofox.mjs tab close <tabId>
 ```
 
-**Troubleshooting — container down:**
+> **⚠️ Stale refs:** Re-take a snapshot after every interaction — refs (`e1`, `e2`...) are regenerated.
+> Use `tab close-all` to clean up all tabs. Use `tab screenshot` and `tab extract` for advanced workflows (see `--help`).
+
+---
+
+#### Troubleshooting
 
 ```bash
+# Health check
+exec node <skill_dir>/scripts/camofox/camofox.mjs health
+
+# Start browser engine (if health shows browserRunning: false)
+exec node <skill_dir>/scripts/camofox/camofox.mjs start
+
+# Restart container
 docker start camofox-browser
-# If doesn't exist (⚠️ use --env-file for API keys, bind to 127.0.0.1):
-# Create .env file first: echo "CAMOFOX_API_KEY=your-key" > .env
+
+# First-time setup (⚠️ create .env with API keys first)
 docker run -d --name camofox-browser --restart unless-stopped \
   -p 127.0.0.1:9377:9377 \
   --env-file .env \
@@ -300,7 +162,7 @@ docker run -d --name camofox-browser --restart unless-stopped \
 
 ### 3. CloakBrowser — Protected sites
 
-For sites with Cloudflare, Akamai, Kasada, DataDome, or when Camofox gets blocked.
+For sites protected by anti-bot systems (Cloudflare, Akamai, DataDome, Imperva, etc.), or when Camofox gets blocked.
 Uses `launch()` from the npm package `cloakbrowser`.
 
 Script: `<skill_dir>/scripts/cloak/cloak-fetch.mjs`
@@ -312,62 +174,38 @@ exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://example.com"
 # Raw HTML
 exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://example.com" --format html
 
+# Markdown (HTML → Markdown via markitdown — preserves headings, lists, links)
+exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://example.com" --format markdown
+
 # With scroll for lazy loading (eBay, Amazon, reviews)
 exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://ebay.com/..." --scroll
 
-# Automatic challenge detection (Cloudflare, Akamai, DataDome...)
-exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://protected-site.com"
+# Persistent session — solved challenges & cookies survive restarts (per-origin profile)
+exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://protected-site.com" --session
 
-# Proxy + geoip for sites that block datacenter IPs
+# Proxy + geoip for sites that block datacenter IPs (add --webrtc-auto to prevent WebRTC IP leaks)
 exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://..." --proxy "socks5://user:pass@proxy:1080" --geoip
 
 # Deterministic fingerprint
 exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://..." --seed 12345 --platform windows
 
+# Slow sites — increase timeout, wait, and retry
+exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://..." --retry 3 --timeout 60000 --wait 5000
+
 # Screenshot (⚠️ writes PNG file — breaks read-only rule)
 # Pass URL as positional arg after the script path
+# Add --fullpage for full-page screenshot
 exec node <skill_dir>/scripts/cloak/cloak-script.mjs --script "<skill_dir>/scripts/cloak/scripts/screenshot.mjs" "https://example.com"
 ```
 
-#### cloak-script.mjs — For complex interactions
-
-When click, login, multi-step, or custom data extraction is needed:
-
-```bash
-exec node <skill_dir>/scripts/cloak/cloak-script.mjs \
-  --script "<skill_dir>/scripts/cloak/scripts/<your-script>.mjs" \
-  --proxy "socks5://..." --seed 12345
-```
+#### cloak-script.mjs — Complex interactions (click, login, tabs)
 
 Full guide: `<skill_dir>/scripts/cloak/guida-fetch.md`
 
----
-
-## Security rules
-
-These rules are enforced by the tooling — do not attempt to bypass them.
-
-- **No internal URLs.** CloakBrowser blocks `localhost`, `127.x`, `10.x`, `192.168.x`, `169.254.x`, and cloud metadata endpoints. DNS resolution is also checked to prevent DNS rebinding attacks.
-- **No path traversal.** `--script` must point within the skill directory. Symlinks are resolved before the check. Use `--unsafe` only if you know the risks.
-- **Sandbox enabled by default.** User scripts receive proxied Playwright objects with only whitelisted methods. Note: Node.js APIs remain available — for full isolation, a `vm.Context` would be required. Use `--unsafe` to bypass the Playwright sandbox.
-- **Rate limiting.** 30 requests/minute by default. Use `--no-rate-limit` to disable.
-- **API keys.** Never paste API keys on the command line. Use env vars (`$CAMOFOX_API_KEY`) or `--env-file` for Docker.
-- **URL encoding.** Always use `--data-urlencode` with curl — never interpolate raw input into URLs.
-- **Docker binding.** Always use `127.0.0.1:` prefix for port mapping. Never expose to `0.0.0.0`.
-- **No social media browsing.** Instagram, Facebook, TikTok, LinkedIn, Twitter/X require login — don't attempt with Camofox or CloakBrowser.
-
-### Security-relevant CLI flags
-
-| Flag | Script | Purpose | When to use |
-|------|--------|---------|-------------|
-| `--unsafe` | `cloak-fetch.mjs`, `cloak-script.mjs` | Bypass SSRF protection, sandbox, and path traversal | Access local/internal services or blocked Playwright APIs |
-| `--no-rate-limit` | Both | Disable 30 req/min limit | Bulk scraping (use responsibly) |
-| `--verbose` | Both | Include stack traces in errors | Debugging only |
-| `--retry <n>` | `cloak-fetch.mjs` | Retry on failure | Unreliable networks |
-| `--timeout <ms>` | Both | Navigation/launch timeout | Slow sites (default: 30000) |
-| `--wait <ms>` | `cloak-fetch.mjs` | Extra wait after page load | Dynamic content (default: 1000) |
-| `--max-chars <n>` | `cloak-fetch.mjs` | Truncate output | Large pages (default: 100000) |
-| `--persistent <dir>` | Both | Persistent browser profile | Cookie/session persistence |
+```bash
+exec node <skill_dir>/scripts/cloak/cloak-script.mjs \
+  --script "<skill_dir>/scripts/cloak/scripts/<your-script>.mjs"
+```
 
 ---
 
