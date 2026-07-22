@@ -16,8 +16,6 @@ browser-search扭转了局面：你的代理不再是那个小偷，而是变成
 
 该技能强制使用确定性脚本，彻底消除模型幻觉，即使是最便宜的模型也不例外。三个工具用自然语言描述，但执行是刚性的：模型既不会用错命令，也不会误解输出。结果是每次查询都能保证成功——技能和确定性脚本引导模型搜遍网络，直到找到答案。
 
-`browser-search`将**三个开源工具**编排成一个专为AI代理设计的搜索和浏览系统。每个工具都有自己的角色，由技能通过升级逻辑、自动选择和即用集成进行编排：
-
 1. **[SearXNG](https://github.com/searxng/searxng)** — 搜索阶段的元搜索引擎（多源，JSON）
 2. **[Camofox](https://github.com/jo-inc/camofox-browser)** — 可通过REST API导航的浏览器，适用于标准网站
 3. **[CloakBrowser](https://github.com/cloakhq/cloakbrowser)** — 用于受反机器人保护网站的隐形浏览器

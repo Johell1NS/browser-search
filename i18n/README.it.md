@@ -16,8 +16,6 @@ browser-search ribalta la situazione: il tuo agente smette di essere il ladro e 
 
 La skill impone l'uso esclusivo di script deterministici. Questo azzera le allucinazioni del modello, anche con i modelli più economici. La skill descrive i 3 strumenti in linguaggio naturale, ma l'esecuzione è rigida: il modello non può sbagliare né il comando da lanciare né come interpretare l'output. Il risultato è un successo garantito su ogni query: la skill e gli script deterministici guidano il modello a scandagliare la rete fino a trovare la risposta.
 
-`browser-search` orchestra **tre strumenti open source** in un unico sistema di ricerca e navigazione progettato per agenti AI. Ogni strumento ha il suo ruolo, orchestrato dalla skill con logica di escalation, selezione automatica e integrazione pronta all'uso:
-
 1. **[SearXNG](https://github.com/searxng/searxng)** — metamotore di ricerca per la fase di ricerca (multi-fonte, JSON)
 2. **[Camofox](https://github.com/jo-inc/camofox-browser)** — browser navigabile via REST API per siti standard
 3. **[CloakBrowser](https://github.com/cloakhq/cloakbrowser)** — browser stealth per siti protetti anti-bot

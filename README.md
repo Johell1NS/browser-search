@@ -33,11 +33,6 @@ The result is guaranteed success on every query — the skill and its
 deterministic scripts guide the model to scour the web until it finds
 the answer.
 
-`browser-search` orchestrates **three open source tools** into a single
-search and browsing system designed for AI agents. Each tool has its role,
-orchestrated by the skill with escalation logic, automatic selection,
-and ready-to-use integration:
-
 1. **[SearXNG](https://github.com/searxng/searxng)** — metasearch engine for the search phase (multi-source, JSON)
 2. **[Camofox](https://github.com/jo-inc/camofox-browser)** — browser navigable via REST API for standard sites
 3. **[CloakBrowser](https://github.com/cloakhq/cloakbrowser)** — stealth browser for anti-bot protected sites
