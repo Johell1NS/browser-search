@@ -130,6 +130,9 @@ node scripts/camofox/camofox.mjs snapshot "https://example.com"
 ```bash
 node scripts/cloak/cloak-fetch.mjs "https://protected-site.com"
 node scripts/cloak/cloak-fetch.mjs "https://protected-site.com" --proxy socks5://... --geoip
+
+# Markdown output (requires: pip install markitdown)
+node scripts/cloak/cloak-fetch.mjs "https://example.com" --format markdown
 ```
 
 ## 为什么同时使用Camofox和CloakBrowser？

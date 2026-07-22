@@ -130,6 +130,9 @@ Playwright + `cloakbrowser` पर आधारित npm पैकेज। Clo
 ```bash
 node scripts/cloak/cloak-fetch.mjs "https://protected-site.com"
 node scripts/cloak/cloak-fetch.mjs "https://protected-site.com" --proxy socks5://... --geoip
+
+# Markdown output (requires: pip install markitdown)
+node scripts/cloak/cloak-fetch.mjs "https://example.com" --format markdown
 ```
 
 ## Camofox और CloakBrowser दोनों क्यों?

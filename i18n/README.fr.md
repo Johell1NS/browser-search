@@ -130,6 +130,9 @@ Paquet npm basé sur Playwright + `cloakbrowser`. Lance un navigateur Chromium a
 ```bash
 node scripts/cloak/cloak-fetch.mjs "https://protected-site.com"
 node scripts/cloak/cloak-fetch.mjs "https://protected-site.com" --proxy socks5://... --geoip
+
+# Markdown output (requires: pip install markitdown)
+node scripts/cloak/cloak-fetch.mjs "https://example.com" --format markdown
 ```
 
 ## Pourquoi à la fois Camofox et CloakBrowser ?
