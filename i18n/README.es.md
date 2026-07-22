@@ -14,7 +14,7 @@ Hoy en día, un agente de IA que intenta navegar la web es como un **ladrón con
 
 👮 browser-search da la vuelta a la situación: tu agente deja de ser el ladrón y se convierte en el **jefe de policía**. No más intentos torpes de acceso. Atraviesa cada puerta porque tiene las herramientas adecuadas. SearXNG para buscar, Camofox para navegar, CloakBrowser cuando el juego se pone difícil.
 
-La skill impone el uso exclusivo de scripts deterministas. Esto elimina las alucinaciones del modelo, incluso con los modelos más baratos. Las 3 herramientas se describen en lenguaje natural, pero la ejecución es rígida: el modelo no puede equivocar el comando ni malinterpretar el resultado. El resultado es un éxito garantizado en cada consulta: la skill y sus scripts deterministas guían al modelo a escudriñar la web hasta encontrar la respuesta.
+La skill impone el uso exclusivo de scripts deterministas. Esto **elimina las alucinaciones del modelo**, incluso con los modelos más baratos. Las 3 herramientas se describen en lenguaje natural, pero la ejecución es rígida: el modelo no puede equivocar el comando ni malinterpretar el resultado. El resultado es un **éxito garantizado en cada consulta**: la skill y sus scripts deterministas guían al modelo a escudriñar la web hasta encontrar la respuesta.
 
 1. **[SearXNG](https://github.com/searxng/searxng)** — metabuscador para la fase de búsqueda (multifuente, JSON)
 2. **[Camofox](https://github.com/jo-inc/camofox-browser)** — navegador accesible vía API REST para sitios estándar
