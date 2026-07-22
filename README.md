@@ -26,10 +26,10 @@ every door because it has the right tools. SearXNG to search, Camofox to browse,
 CloakBrowser when the site plays hardball.
 
 The skill enforces the exclusive use of deterministic scripts.
-This eliminates model hallucinations, even with the cheapest models.
+This **eliminates model hallucinations**, even with the cheapest models.
 The 3 tools are described in natural language, but execution is rigid:
 the model can neither get the command wrong nor misinterpret the output.
-The result is guaranteed success on every query — the skill and its
+The result is **guaranteed success on every query** — the skill and its
 deterministic scripts guide the model to scour the web until it finds
 the answer.
 
