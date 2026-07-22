@@ -92,7 +92,7 @@ Conteneur Docker sur `localhost:8080`. Métamoteur qui interroge Google, Wikiped
 **Exemple :**
 
 ```bash
-curl -s "http://localhost:8080/search?format=json&q=largest+llm+benchmark+2026"
+node scripts/searxng/searxng.mjs search "largest llm benchmark 2026"
 ```
 
 L'agent a maintenant une liste d'URLs à visiter et décide de manière autonome s'il doit les naviguer avec Camofox ou CloakBrowser en fonction du site.
@@ -106,19 +106,14 @@ Conteneur Docker sur `localhost:9377`. Expose un navigateur Firefox complet via 
 **Commandes principales :**
 
 ```bash
-# Créer un onglet et naviguer
-curl -s -X POST "http://localhost:9377/tabs" \
-  -H 'Content-Type: application/json' \
-  -d '{"userId":"bot","url":"https://example.com"}'
+# Single-URL extraction (Readability.js, auto-fallback to snapshot)
+node scripts/camofox/camofox.mjs readability "https://example.com"
 
-# Lire un instantané (arbre d'accessibilité)
-curl -s "http://localhost:9377/tabs/<tabId>/snapshot?userId=bot"
+# JavaScript evaluation
+node scripts/camofox/camofox.mjs evaluate "https://example.com" "document.title"
 
-# Exécuter du JavaScript
-curl -s -X POST "http://localhost:9377/tabs/<tabId>/evaluate" \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $CAMOFOX_API_KEY" \
-  -d '{"userId":"bot","expression":"document.title"}'
+# Accessibility snapshot
+node scripts/camofox/camofox.mjs snapshot "https://example.com"
 ```
 
 ### Phase 3 — Navigation avec CloakBrowser (quand Camofox ne suffit pas)
@@ -207,11 +202,11 @@ browser-search ne fournit pas de fichiers docker-compose ni de scripts d'install
 |---|---|
 | `SKILL.md` | Skill complète : commandes, escalade, dépannage |
 | `scripts/cloak/cloak-fetch.mjs` | Utilisation de la CLI CloakBrowser et toutes les options |
-| `scripts/setup-dependencies.sh` | Dépendances système |
-| `scripts/check-browser-search.sh` | Vérification post-installation |
+| `scripts/setup.sh` | Dépendances système |
+| `scripts/check.sh` | Vérification post-installation |
 | `docker/setup.md` | Conseils de configuration Docker |
 
-**Remarque :** `SKILL.md` est écrite pour la syntaxe **OpenCode** (`exec`, `curl`). Si votre agent utilise un format différent (Claude Code, Cursor, etc.), lisez-la et convertissez les commandes dans la syntaxe de votre agent avant d'utiliser la skill.
+**Remarque :** `SKILL.md` est écrite pour la syntaxe **OpenCode** (`exec`, `node scripts`). Si votre agent utilise un format différent (Claude Code, Cursor, etc.), lisez-la et convertissez les commandes dans la syntaxe de votre agent avant d'utiliser la skill.
 
 ## Variables d'environnement
 
@@ -243,7 +238,7 @@ browser-search comprend plusieurs couches de durcissement de la sécurité :
 
 - **Clés API.** Utilisez des variables d'environnement (`$CAMOFOX_API_KEY`) ou `--env-file` pour Docker. Ne collez jamais les clés sur la ligne de commande — elles apparaissent dans `ps aux` et l'historique du shell.
 - **Liaison Docker.** Utilisez toujours le préfixe `127.0.0.1:` pour le mappage de ports (`-p 127.0.0.1:9377:9377`). N'exposez jamais sur `0.0.0.0`.
-- **Encodage URL.** Utilisez `--data-urlencode` avec curl — n'interpolez jamais d'entrées brutes dans les URLs.
+- **Encodage URL.** Les scripts déterministes gèrent l'encodage en interne. Aucun échappement manuel nécessaire.
 - **Épinglage de versions.** Les dépendances utilisent des versions exactes (pas de plages `^`) et `package-lock.json` pour des builds reproductibles.
 
 ### Audit

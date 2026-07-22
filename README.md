@@ -132,7 +132,7 @@ JSON output with titles, snippets, and URLs.
 **Example:**
 
 ```bash
-curl -s "http://localhost:8080/search?format=json&q=largest+llm+benchmark+2026"
+node scripts/searxng/searxng.mjs search "largest llm benchmark 2026"
 ```
 
 The agent now has a list of URLs to visit and autonomously decides
@@ -150,19 +150,14 @@ removing nav, sidebar, and ads (~70% token savings).
 **Main commands:**
 
 ```bash
-# Create tab and navigate
-curl -s -X POST "http://localhost:9377/tabs" \
-  -H 'Content-Type: application/json' \
-  -d '{"userId":"bot","url":"https://example.com"}'
+# Single-URL extraction (Readability.js, auto-fallback to snapshot)
+node scripts/camofox/camofox.mjs readability "https://example.com"
 
-# Read snapshot (accessibility tree)
-curl -s "http://localhost:9377/tabs/<tabId>/snapshot?userId=bot"
+# JavaScript evaluation
+node scripts/camofox/camofox.mjs evaluate "https://example.com" "document.title"
 
-# Execute JavaScript
-curl -s -X POST "http://localhost:9377/tabs/<tabId>/evaluate" \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $CAMOFOX_API_KEY" \
-  -d '{"userId":"bot","expression":"document.title"}'
+# Accessibility snapshot
+node scripts/camofox/camofox.mjs snapshot "https://example.com"
 ```
 
 ### Phase 3 — Browse with CloakBrowser (when Camofox isn't enough)
@@ -264,11 +259,11 @@ browser-search does not provide platform-specific docker-compose files or instal
 |---|---|
 | `SKILL.md` | Complete skill: commands, escalation, troubleshooting |
 | `scripts/cloak/cloak-fetch.mjs` | CloakBrowser CLI usage and all options |
-| `scripts/setup-dependencies.sh` | System dependencies |
-| `scripts/check-browser-search.sh` | Post-installation verification |
+| `scripts/setup.sh` | System dependencies |
+| `scripts/check.sh` | Post-installation verification |
 | `docker/setup.md` | Docker setup tips |
 
-**Note:** `SKILL.md` is written for **OpenCode** syntax (`exec`, `curl`).
+**Note:** `SKILL.md` is written for **OpenCode** syntax (`exec`, `node scripts`).
 If your agent uses a different format (Claude Code, Cursor, etc.), read it
 and convert the commands to your agent's syntax before using the skill.
 
@@ -303,7 +298,7 @@ browser-search includes multiple layers of security hardening:
 
 - **API keys.** Use environment variables (`$CAMOFOX_API_KEY`) or `--env-file` for Docker. Never paste keys on the command line — they appear in `ps aux` and shell history.
 - **Docker binding.** Always use `127.0.0.1:` prefix for port mapping (`-p 127.0.0.1:9377:9377`). Never expose to `0.0.0.0`.
-- **URL encoding.** Use `--data-urlencode` with curl — never interpolate raw input into URLs.
+- **URL encoding.** Deterministic scripts handle encoding internally. No manual escaping needed.
 - **Version pinning.** Dependencies use exact versions (no `^` caret ranges) and `package-lock.json` for reproducible builds.
 
 ### Audit

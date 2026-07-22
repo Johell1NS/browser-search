@@ -92,7 +92,7 @@ browser-search هي مهارة — مجموعة تعليمات لوكلاء ال
 **مثال:**
 
 ```bash
-curl -s "http://localhost:8080/search?format=json&q=largest+llm+benchmark+2026"
+node scripts/searxng/searxng.mjs search "largest llm benchmark 2026"
 ```
 
 الوكيل لديه الآن قائمة عناوين URL لزيارتها ويقرر بشكل مستقل ما إذا كان سيتصفحها باستخدام Camofox أو CloakBrowser بناءً على الموقع.
@@ -106,19 +106,14 @@ curl -s "http://localhost:8080/search?format=json&q=largest+llm+benchmark+2026"
 **الأوامر الرئيسية:**
 
 ```bash
-# إنشاء علامة تبويب والتنقل
-curl -s -X POST "http://localhost:9377/tabs" \
-  -H 'Content-Type: application/json' \
-  -d '{"userId":"bot","url":"https://example.com"}'
+# Single-URL extraction (Readability.js, auto-fallback to snapshot)
+node scripts/camofox/camofox.mjs readability "https://example.com"
 
-# قراءة لقطة (شجرة الوصول)
-curl -s "http://localhost:9377/tabs/<tabId>/snapshot?userId=bot"
+# JavaScript evaluation
+node scripts/camofox/camofox.mjs evaluate "https://example.com" "document.title"
 
-# تنفيذ JavaScript
-curl -s -X POST "http://localhost:9377/tabs/<tabId>/evaluate" \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $CAMOFOX_API_KEY" \
-  -d '{"userId":"bot","expression":"document.title"}'
+# Accessibility snapshot
+node scripts/camofox/camofox.mjs snapshot "https://example.com"
 ```
 
 ### المرحلة 3 — التصفح باستخدام CloakBrowser (عندما لا يكون Camofox كافياً)
@@ -207,11 +202,11 @@ browser-search لا يوفر ملفات docker-compose أو نصوص تثبيت 
 |---|---|
 | `SKILL.md` | المهارة الكاملة: الأوامر، التصعيد، استكشاف الأخطاء |
 | `scripts/cloak/cloak-fetch.mjs` | استخدام واجهة CLI لـ CloakBrowser وجميع الخيارات |
-| `scripts/setup-dependencies.sh` | تبعيات النظام |
-| `scripts/check-browser-search.sh` | التحقق بعد التثبيت |
+| `scripts/setup.sh` | تبعيات النظام |
+| `scripts/check.sh` | التحقق بعد التثبيت |
 | `docker/setup.md` | نصائح إعداد Docker |
 
-**ملاحظة:** `SKILL.md` مكتوب بناء جملة **OpenCode** (`exec`، `curl`). إذا كان وكيلك يستخدم تنسيقاً مختلفاً (Claude Code، Cursor، إلخ)، اقرأه وحوّل الأوامر إلى بناء جملة وكيلك قبل استخدام المهارة.
+**ملاحظة:** `SKILL.md` مكتوب بناء جملة **OpenCode** (`exec`، `node scripts`). إذا كان وكيلك يستخدم تنسيقاً مختلفاً (Claude Code، Cursor، إلخ)، اقرأه وحوّل الأوامر إلى بناء جملة وكيلك قبل استخدام المهارة.
 
 ## متغيرات البيئة
 
@@ -243,7 +238,7 @@ browser-search يتضمن عدة طبقات من تعزيز الأمان:
 
 - **مفاتيح API.** استخدم متغيرات البيئة (`$CAMOFOX_API_KEY`) أو `--env-file` لـ Docker. لا تلصق المفاتيح أبداً في سطر الأوامر — تظهر في `ps aux` وسجل الأوامر.
 - **ربط Docker.** استخدم دائماً البادئة `127.0.0.1:` لتعيين المنفذ (`-p 127.0.0.1:9377:9377`). لا تعرض أبداً على `0.0.0.0`.
-- **ترميز URL.** استخدم `--data-urlencode` مع curl — لا تقم أبداً بإدراج المدخلات الخام في URLs.
+- **ترميز URL.** تتعامل النصوص الحتمية مع الترميز داخلياً. لا حاجة للتشفير اليدوي.
 - **تثبيت الإصدارات.** التبعيات تستخدم إصدارات محددة (بدون نطاقات `^`) و `package-lock.json` لبناءات قابلة للتكرار.
 
 ### التدقيق
