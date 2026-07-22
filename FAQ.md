@@ -128,7 +128,7 @@ Yes. browser-search is a **skill** — a plain-text instruction set that
 any LLM-based agent can read and follow. It is explicitly designed to be
 agent-agnostic.
 
-The `SKILL.md` is written for **OpenCode** syntax (`exec`, `curl`), but
+The `SKILL.md` is written for **OpenCode** syntax (`exec`, `node scripts`), but
 the logic is identical for any agent:
 
 - **Claude Code** — use `bash`/`tool` blocks instead of `exec`
