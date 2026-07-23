@@ -2,6 +2,7 @@
 
 import { writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
+import { execSync } from "node:child_process";
 import * as client from "./camofox-client.mjs";
 
 const subcommand = process.argv[2];
@@ -49,8 +50,27 @@ async function ensureBrowser() {
   try {
     const h = await client.health();
     if (h.browserRunning) return;
-  } catch {
-    // health failed, try start anyway
+  } catch (err) {
+    if (err.status === 503) {
+      client.logStep("Browser in stato recovering, riavvio container...");
+      try {
+        execSync("docker restart camofox-browser", { stdio: "pipe" });
+      } catch (restartErr) {
+        throw new Error("Riavvio container fallito: " + restartErr.message);
+      }
+      const deadline = Date.now() + 30_000;
+      while (Date.now() < deadline) {
+        try {
+          const h2 = await client.health();
+          if (h2.browserRunning) return;
+        } catch {
+          // server still starting, keep polling
+        }
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+      throw new Error("Browser non disponibile dopo riavvio container (30s timeout)");
+    }
+    // Per altri errori (ECONNREFUSED, container giù) → comportamento legacy
   }
   client.logStep("Browser non in esecuzione, avvio...");
   await client.start();
