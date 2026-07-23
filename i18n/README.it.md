@@ -8,8 +8,6 @@
 
 ## Perché esiste
 
-browser-search è una **SKILL** — un insieme di istruzioni per agenti AI come OpenCode, Claude Code, Cursor, OpenClaw e altri. Insegna al tuo agente come cercare e navigare sul web usando tre strumenti open source orchestrati.
-
 Oggi un agente AI che cerca di navigare il web è come un **ladro con il passamontagna** che si aggira in una scuola di polizia. Le protezioni dei siti lo bloccano, lo sfidano, lo respingono.
 
 👮 browser-search ribalta la situazione: il tuo agente smette di essere il ladro e diventa il **capo della polizia**. Niente più tentativi goffi di accesso. Attraversa ogni porta perché ha gli strumenti giusti. SearXNG per le ricerche, Camofox per navigare, CloakBrowser quando il gioco si fa duro.

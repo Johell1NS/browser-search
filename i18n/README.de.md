@@ -8,8 +8,6 @@
 
 ## Warum es existiert
 
-browser-search ist eine **SKILL** — ein Anweisungssatz für KI-Agenten wie OpenCode, Claude Code, Cursor, OpenClaw und andere. Sie bringt Ihrem Agenten bei, wie er mit drei orchestrierten Open-Source-Tools das Web durchsuchen und browsen kann.
-
 Heute ist ein KI-Agent, der das Web durchsuchen will, wie ein **Dieb mit Sturmhaube**, der sich in einer Polizeiakademie herumtreibt. Die Seitenschutzmaßnahmen blockieren ihn, fordern ihn heraus, weisen ihn ab.
 
 👮 browser-search dreht die Situation um: Ihr Agent ist nicht mehr der Dieb, sondern wird zum **Polizeichef**. Keine unbeholfenen Zugriffsversuche mehr. Er geht durch jede Tür, weil er die richtigen Werkzeuge hat. SearXNG zum Suchen, Camofox zum Browsen, CloakBrowser wenn es hart auf hart kommt.

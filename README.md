@@ -13,10 +13,6 @@
 
 ## Why it exists
 
-browser-search is a **SKILL** — an instruction set for AI agents like OpenCode,
-Claude Code, Cursor, OpenClaw and others. It teaches your agent how to
-search and browse the web using three orchestrated open source tools.
-
 Today an AI agent browsing the web is like a **thief in a balaclava** sneaking
 around a police academy. The site protections block it, challenge it, reject it.
 
