@@ -74,11 +74,25 @@ async function ensureBrowser() {
   }
   client.logStep("Browser non in esecuzione, avvio...");
   await client.start();
-  await new Promise((r) => setTimeout(r, 2000));
-  const h2 = await client.health();
-  if (!h2.browserRunning) {
-    throw new Error("Impossibile avviare il browser");
+
+  const BACKOFFS = [3, 5, 8, 12, 18];
+  for (const delay of BACKOFFS) {
+    await new Promise((r) => setTimeout(r, delay * 1000));
+    client.logStep(`Smoke test browser (attesa ${delay}s)...`);
+    try {
+      const tab = await client.createTab("http://example.com");
+      try {
+        await client.evaluate(tab.tabId, "1+1");
+        client.logStep("Smoke test superato, browser operativo");
+        return;
+      } finally {
+        try { await client.closeTab(tab.tabId); } catch {}
+      }
+    } catch (e) {
+      client.logStep(`Smoke test fallito: ${e.message}`);
+    }
   }
+  throw new Error("Browser non operativo dopo " + BACKOFFS.length + " tentativi di smoke test");
 }
 
 async function runOnTab(url, fn, { waitMs = 0 } = {}) {
