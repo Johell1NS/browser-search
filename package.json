@@ -1,6 +1,6 @@
 {
   "name": "browser-search",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Multi-tier web search & browser automation for AI agents. SearXNG + Camofox + CloakBrowser.",
   "private": false,
   "dependencies": {
