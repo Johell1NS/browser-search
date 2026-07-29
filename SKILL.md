@@ -124,7 +124,7 @@ exec node <skill_dir>/scripts/camofox/camofox.mjs evaluate "https://www.amazon.i
 **⚠️ Operate tabs sequentially — never in parallel.**
 
 ```bash
-exec node <skill_dir>/scripts/camofox/camofox.mjs tab open "<url>"
+exec node <skill_dir>/scripts/camofox/camofox.mjs tab open "<url>" [--wait]
 exec node <skill_dir>/scripts/camofox/camofox.mjs tab snapshot <tabId>
 exec node <skill_dir>/scripts/camofox/camofox.mjs tab click <tabId> <ref>
 exec node <skill_dir>/scripts/camofox/camofox.mjs tab type <tabId> <ref> "<text>"
@@ -136,6 +136,8 @@ exec node <skill_dir>/scripts/camofox/camofox.mjs tab close <tabId>
 
 > **⚠️ Stale refs:** Re-take a snapshot after every interaction — refs (`e1`, `e2`...) are regenerated.
 > Use `tab close-all` to clean up all tabs. Use `tab screenshot` and `tab extract` for advanced workflows (see `--help`).
+
+> **`tab open --wait`:** Optional flag on `tab open` that waits ~2s after navigation for the page to settle before returning the tabId. Useful for slow-loading sites where subsequent `tab evaluate` would otherwise see a half-rendered DOM. Default behavior returns immediately.
 
 ---
 
