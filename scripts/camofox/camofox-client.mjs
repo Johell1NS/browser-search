@@ -9,6 +9,7 @@ const SESSION_KEY = "default";
 const BASE_URL = "http://localhost:9377";
 const API_KEY = process.env.CAMOFOX_API_KEY || "";
 const ADMIN_KEY = process.env.CAMOFOX_ADMIN_KEY || "";
+const REQUEST_TIMEOUT_MS = 60000;
 
 function logStep(msg) {
   process.stderr.write(`[camofox-client] ${msg}\n`);
@@ -32,7 +33,7 @@ async function request(method, path, { body, headers: extraHeaders = {}, rawOutp
     headers["Content-Type"] = "application/json";
   }
 
-  if (API_KEY && (path.startsWith("/tabs") && method === "POST" && path.endsWith("/evaluate"))) {
+  if (API_KEY && path.startsWith("/tabs") && method === "POST") {
     headers["Authorization"] = `Bearer ${API_KEY}`;
   }
   if (API_KEY && path.startsWith("/sessions")) {
@@ -45,7 +46,7 @@ async function request(method, path, { body, headers: extraHeaders = {}, rawOutp
     headers["x-admin-key"] = ADMIN_KEY;
   }
 
-  const opts = { method, headers };
+  const opts = { method, headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) };
   if (body && method !== "GET") {
     opts.body = JSON.stringify(body);
   }
@@ -74,6 +75,10 @@ async function request(method, path, { body, headers: extraHeaders = {}, rawOutp
 
 async function health() {
   return request("GET", "/health");
+}
+
+async function getTabs() {
+  return request("GET", "/tabs", { body: { userId: USER_ID } });
 }
 
 async function start() {
@@ -189,6 +194,7 @@ export {
   wait,
   screenshotRaw,
   destroySession,
+  getTabs,
   readability,
   getReadabilityJs,
 };
