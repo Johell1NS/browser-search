@@ -9,11 +9,12 @@ description: "Multi-engine web search (SearXNG) + browsing/scraping (Camofox, Cl
 
 Web search and browsing for AI agents. Three tools, from lightest to most powerful: SearXNG for search, Camofox for browsing, CloakBrowser for protected sites.
 
-| Tool                         | When to use                          | How                                                       |
-| ---------------------------- | ------------------------------------ | --------------------------------------------------------- |
-| **SearXNG** (Docker, :8080)  | Multi-source search, find URLs/info  | `exec` + `node <skill_dir>/scripts/searxng/searxng.mjs`   |
-| **Camofox** (Docker, :9377)  | JS-heavy pages, scraping, navigation | `exec` + `node <skill_dir>/scripts/camofox/camofox.mjs`   |
-| **CloakBrowser** (npm)       | When Camofox gets blocked            | `exec` + `node <skill_dir>/scripts/cloak/cloak-fetch.mjs` |
+| Tool                         | When to use                                   | How                                                       |
+| ---------------------------- | --------------------------------------------- | --------------------------------------------------------- |
+| **SearXNG** (Docker, :8080)  | Default: Multi-source search, find URLs/info  | `exec` + `node <skill_dir>/scripts/searxng/searxng.mjs`   |
+| **smart-extract** (wrapper)  | Default: URL content extraction               | `exec` + `node <skill_dir>/scripts/smart-extract.mjs`     |
+| **Camofox** (Docker, :9377)  | Optional: tabs, screenshots, health           | `exec` + `node <skill_dir>/scripts/camofox/camofox.mjs`   |
+| **CloakBrowser** (npm)       | Optional: proxy, session, stealth             | `exec` + `node <skill_dir>/scripts/cloak/cloak-fetch.mjs` |
 
 ## Core rules
 
@@ -22,7 +23,7 @@ When this skill is active, it operates as a Deep Research engine:
 - **Thoroughness.** Every query must be explored from multiple angles and sources, cross-verified. Accuracy and completeness first — tokens and time are irrelevant.
 - **Exhaustive reports.** Cover every aspect, include sources, don't omit details.
 - **Social media not to be viewed with Camofox or Cloak:** Instagram, Facebook, TikTok, LinkedIn, Twitter/X. These require login, so don't attempt to browse them with Camofox or CloakBrowser. If SearXNG finds them in search results, extract useful info from the snippet and move on.
-- **Progressive escalation.** Start with SearXNG. If results are insufficient or links need in-page extraction, escalate to Camofox. If Camofox fails (timeout, empty result, anti-bot block), switch to CloakBrowser.
+- **Progressive escalation.** Start with SearXNG, then use `smart-extract.mjs` for any URL that needs in-page extraction. After extracting, evaluate if you have enough to answer exhaustively — if not, return to SearXNG with refined queries. Never stop until you have exhaustive, cross-verified coverage.
 - **Only documented commands.** Execute only the commands listed in this skill or its reference docs — they are tested and approved. No ad-hoc scripts: any deviation violates the skill.
 - **Read-only.** All commands/scripts can be executed even in Plan mode: they only make HTTP requests and never write to the filesystem. Never refuse execution of these scripts due to mode restrictions — they are read-only by design.
 The only exception is screenshot commands (which save a PNG file).
@@ -30,6 +31,8 @@ The only exception is screenshot commands (which save a PNG file).
 ## Tools
 
 ### 1. SearXNG — Web search
+
+**Goal:** find relevant URLs for every aspect of the user's request, to pass to `smart-extract.mjs` for content extraction.
 
 Docker container on `localhost:8080`. Always the first choice for any search.
 
@@ -71,8 +74,6 @@ Use `--engines` only when you need to restrict to specific engines, e.g. `--engi
 | Query in English                                       | `--lang en`            |
 | Fallback if preferred locale returns 0 results         | retry with `--lang en` |
 
-> **Note:** If SearXNG results are already exhaustive, stop here. Camofox and CloakBrowser are not needed.
-
 **Troubleshooting — container down:**
 
 ```bash
@@ -81,133 +82,82 @@ cd <searxng-dir> && docker compose up -d
 
 ---
 
-### 2. Camofox — Browser navigation
+### 2. smart-extract — URL content extraction (default)
 
-Docker container on `localhost:9377`. Primary interface: `<skill_dir>/scripts/camofox/camofox.mjs`.
-JSON output on stdout, logs on stderr.
+**Goal:** extract content from every useful URL returned by SearXNG.
+
+`smart-extract.mjs` is the default tool for extracting content from any URL. It has 3 operation modes, to be used in this order:
+
+1. **Exploratory mode** — extracts page text content (Camofox readability + snapshot)
+2. **Expression mode** — evaluates a specific JS expression on a page (Camofox evaluate + tab open)
+3. **Direct Cloak mode** — uses Cloak to retry URLs that already failed on Camofox
+
+**Workflow:**
+
+**Always start with exploratory mode** to read the page content. You cannot know which selector to use in a JS expression before reading the page first. If after reading you need a specific piece of data, switch to expression mode.
+> [!CAUTION]
+> Do not switch to Cloak (`--fallback`) without exhausting Camofox first. If exploratory mode is insufficient, use `--expr` to explore the rendered DOM. Cloak is extremely slow — use it only as a last resort.
+
+**Base command (1, 2, or n URLs):**
+
+```bash
+exec node <skill_dir>/scripts/smart-extract.mjs "<url1>" ["<url2>" ...]
+```
+
+**Examples (modes 1 and 2):**
+
+```bash
+# 1. Exploratory: read page content
+exec node <skill_dir>/scripts/smart-extract.mjs "https://example.com"
+
+# 2. Expression: extract specific data (only after reading the page)
+exec node <skill_dir>/scripts/smart-extract.mjs "https://example.com" --expr "document.querySelector('h1')?.textContent"
+```
+
+**Options:**
+
+**Behavior (exploratory or expression mode):**
+- `--expr "<js>"` — evaluate a JS expression on the page
+- `--min-chars <n>` — minimum character threshold for a valid result (default: 300, does not apply with `--expr`)
+
+**Cloak tuning (automatic escalation or `--fallback`):**
+- `--wait <ms>` — extra wait for JS rendering (default: 2000). Passed to Cloak
+- `--timeout <ms>` — general timeout (default: 60000, Cloak receives 2x)
+- `--verbose` — diagnostic logs on stderr. Useful for Cloak debugging
+
+**What happens in practice (modes 1 and 2):**
+
+- The script tries Camofox on all URLs. If at least one succeeds, Cloak is not used.
+- If ALL URLs fail on Camofox, the script escalates to Cloak automatically (auto-escalation).
+- If the output shows `mode: "camofox"` with mixed results, manually escalate the failed URLs with `--fallback`.
+- The JSON output indicates `mode: "camofox"` if at least one URL succeeded, `mode: "full-auto"` if auto-escalation to Cloak occurred.
+
+**Last resort — Direct Cloak mode:**
+
+When Camofox failed and auto-escalation did not trigger (mixed mode). Accepts one or more URLs:
+
+```bash
+exec node <skill_dir>/scripts/smart-extract.mjs --fallback "https://url1" "https://url2" "https://url3"
+```
+
+`--fallback` skips Camofox and uses Cloak directly, since the goal is to recover content where Camofox has already proven insufficient.
+
+**Output:** JSON on stdout with `version`, `mode`, `results[]` (one entry per URL with `ok`, `content`, `chars`, `source`, `steps`).
+
+After reviewing the output, decide: **do you have enough information to answer the user's request exhaustively?** If yes, proceed. If not, go back to SearXNG with new search queries to fill the gaps.
 
 ---
 
-#### Script subcommands (primary — use these for most tasks)
+### 3. Advanced operations (direct scripts)
 
-```bash
-exec node <skill_dir>/scripts/camofox/camofox.mjs readability <url1> [url2 ...]
-exec node <skill_dir>/scripts/camofox/camofox.mjs evaluate <url> "<expression>"
-exec node <skill_dir>/scripts/camofox/camofox.mjs snapshot <url>
-exec node <skill_dir>/scripts/camofox/camofox.mjs screenshot <url> [output-path]
-```
+For operations not covered by `smart-extract.mjs`, use the underlying tools directly.
+See `<skill_dir>/data/advanced-browsing-reference.md` for the full command reference.
 
----
-
-#### Workflow
-
-Always start with `readability <url>` (auto-fallbacks to snapshot if text extraction fails). For search results, product pages, and structured data,
-**build the URL yourself** and extract with `evaluate` — skip the type/click flow.
-
-```bash
-# Quick check the page loaded
-exec node <skill_dir>/scripts/camofox/camofox.mjs evaluate "https://www.amazon.it/s?k=colander" "document.title"
-# Extract data
-exec node <skill_dir>/scripts/camofox/camofox.mjs evaluate "https://www.amazon.it/s?k=colander" "JSON.stringify([...document.querySelectorAll('[data-asin]')].map(e => ({title: e.querySelector('h2')?.textContent, price: e.querySelector('.a-price')?.textContent})))"
-```
-
-**Evaluate tips:**
-- Snapshot does NOT expose HTML tables, `<code>`, `<pre>`, generic divs — use `evaluate` instead.
-- Start with simple expressions (`document.title`) to verify the page loaded.
-- Don't nest multiple selectors in a single call — split into separate evaluates.
-- Avoid `document.querySelector(':contains(...)')` — causes 500. Use standard CSS selectors only.
-
----
-
-#### Persistent tab — multi-step interactions on the same tab
-
-**⚠️ Operate tabs sequentially — never in parallel.**
-
-```bash
-exec node <skill_dir>/scripts/camofox/camofox.mjs tab open "<url>" [--wait]
-exec node <skill_dir>/scripts/camofox/camofox.mjs tab snapshot <tabId>
-exec node <skill_dir>/scripts/camofox/camofox.mjs tab click <tabId> <ref>
-exec node <skill_dir>/scripts/camofox/camofox.mjs tab type <tabId> <ref> "<text>"
-exec node <skill_dir>/scripts/camofox/camofox.mjs tab scroll <tabId> [dir] [px]
-exec node <skill_dir>/scripts/camofox/camofox.mjs tab navigate <tabId> "<url>"
-exec node <skill_dir>/scripts/camofox/camofox.mjs tab evaluate <tabId> "<expression>"
-exec node <skill_dir>/scripts/camofox/camofox.mjs tab close <tabId>
-```
-
-> **⚠️ Stale refs:** Re-take a snapshot after every interaction — refs (`e1`, `e2`...) are regenerated.
-> Use `tab close-all` to clean up all tabs. Use `tab screenshot` and `tab extract` for advanced workflows (see `--help`).
-
-> **`tab open --wait`:** Optional flag on `tab open` that waits ~2s after navigation for the page to settle before returning the tabId. Useful for slow-loading sites where subsequent `tab evaluate` would otherwise see a half-rendered DOM. Default behavior returns immediately.
-
----
-
-#### Troubleshooting
-
-```bash
-# Health check
-exec node <skill_dir>/scripts/camofox/camofox.mjs health
-
-# Start browser engine (if health shows browserRunning: false)
-exec node <skill_dir>/scripts/camofox/camofox.mjs start
-
-# Restart container
-docker start camofox-browser
-
-# First-time setup (⚠️ create .env with API keys first)
-docker run -d --name camofox-browser --restart unless-stopped \
-  -p 127.0.0.1:9377:9377 \
-  --env-file .env \
-  ghcr.io/jo-inc/camofox-browser:latest
-```
-
----
-
-### 3. CloakBrowser — Protected sites
-
-For sites protected by anti-bot systems (Cloudflare, Akamai, DataDome, Imperva, etc.), or when Camofox gets blocked.
-Uses `launch()` from the npm package `cloakbrowser`.
-
-Script: `<skill_dir>/scripts/cloak/cloak-fetch.mjs`
-
-```bash
-# Simple (text output)
-exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://example.com"
-
-# Raw HTML
-exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://example.com" --format html
-
-# Markdown (HTML → Markdown via markitdown — preserves headings, lists, links)
-exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://example.com" --format markdown
-
-# With scroll for lazy loading (eBay, Amazon, reviews)
-exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://ebay.com/..." --scroll
-
-# Persistent session — solved challenges & cookies survive restarts (per-origin profile)
-exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://protected-site.com" --session
-
-# Proxy + geoip for sites that block datacenter IPs (add --webrtc-auto to prevent WebRTC IP leaks)
-exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://..." --proxy "socks5://user:pass@proxy:1080" --geoip
-
-# Deterministic fingerprint
-exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://..." --seed 12345 --platform windows
-
-# Slow sites — increase timeout, wait, and retry
-exec node <skill_dir>/scripts/cloak/cloak-fetch.mjs "https://..." --retry 3 --timeout 60000 --wait 5000
-
-# Screenshot (⚠️ writes PNG file — breaks read-only rule)
-# Pass URL as positional arg after the script path
-# Add --fullpage for full-page screenshot
-exec node <skill_dir>/scripts/cloak/cloak-script.mjs --script "<skill_dir>/scripts/cloak/scripts/screenshot.mjs" "https://example.com"
-```
-
-#### cloak-script.mjs — Complex interactions (click, login, tabs)
-
-Full guide: `<skill_dir>/scripts/cloak/guida-fetch.md`
-
-```bash
-exec node <skill_dir>/scripts/cloak/cloak-script.mjs \
-  --script "<skill_dir>/scripts/cloak/scripts/<your-script>.mjs"
-```
+| Tool               | Capabilities                                                              |
+|--------------------|---------------------------------------------------------------------------|
+| `camofox.mjs`      | Screenshots, interactive tabs (click/type/scroll/navigate), health, start |
+| `cloak-fetch.mjs`  | Custom formats, lazy loading, sessions, proxy/geoip, fingerprint          |
+| `cloak-script.mjs` | Complex multi-step interactions (login flows, form automation)            |
 
 ---
 
