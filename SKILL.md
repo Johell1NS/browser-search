@@ -58,6 +58,12 @@ exec node <skill_dir>/scripts/searxng/searxng.mjs search "<query>" --categories 
 # Pagination
 exec node <skill_dir>/scripts/searxng/searxng.mjs search "<query>" --page 2
 
+# Multiple queries (run in series with a 3s gap between them)
+exec node <skill_dir>/scripts/searxng/searxng.mjs search \
+  --query "<q1>" --time-range month \
+  --query "<q2>" --lang it \
+  --query "<q3>"
+
 # Health check
 exec node <skill_dir>/scripts/searxng/searxng.mjs health
 ```
@@ -65,6 +71,8 @@ exec node <skill_dir>/scripts/searxng/searxng.mjs health
 All flags are optional.
 By default, SearXNG searches **all enabled engines**.  
 Use `--engines` only when you need to restrict to specific engines, e.g. `--engines google,wikipedia`.
+
+**Rate-limit:** when you need several searches, group them into a single command with `--query` — each query can have its own flags. The script runs them in series with a 3s gap between queries so the burst doesn't look like a bot. Never launch multiple separate `search` commands in rapid succession.
 
 **Language strategy:**
 
