@@ -10,14 +10,21 @@ function usage() {
 
 Subcomandi:
   search <query> [flags]     Esegue una ricerca
+  search --query <q> [flags] [--query <q2> [flags] ...]
+                             Esegue piu ricerche in serie (3s di distanza)
   health                     Health check del container
 
 Flags per "search":
+  --query <query>            Apre un nuovo gruppo di ricerca (modalita multi-query)
   --lang <code>              Lingua (es. it, en, fr, de...)
   --categories <csv>         Categorie (general, news, images, videos, files, social, music)
   --time-range <range>       time_range (day, week, month, year)
   --engines <csv>            Restringe a motori specifici (default: tutti gli abilitati)
   --page <n>                 Numero pagina (default: 1)
+
+Variabile d'ambiente:
+  SEARXNG_QUERY_DELAY <ms>   Attesa tra query consecutive in modalita multi-query
+                             (default: 3000, 0 per disattivare)
 
 Esempi:
   searxng.mjs search "Sanremo 2026"
@@ -25,6 +32,7 @@ Esempi:
   searxng.mjs search "CORS Next.js" --lang en --categories general --time-range month
   searxng.mjs search "mountain" --categories images --page 2
   searxng.mjs search "AI" --engines wikipedia
+  searxng.mjs search --query "AI news" --time-range week --query "AI models" --lang en
   searxng.mjs health
 `);
   process.exit(2);
@@ -61,13 +69,48 @@ function parseFlags(args) {
   return flags;
 }
 
-async function cmdSearch() {
-  const query = process.argv[3];
-  if (!query || query.startsWith("--")) {
-    fail("Missing query. Usage: searxng.mjs search <query> [flags]");
-  }
-  const flags = parseFlags(process.argv.slice(4));
+const FLAG_ALIASES = {
+  "--lang": "--lang",
+  "--categories": "--categories",
+  "--time-range": "--time-range",
+  "--time_range": "--time-range",
+  "--engines": "--engines",
+  "--page": "--page",
+};
 
+function parseQueryGroups(args) {
+  const groups = [];
+  let current = null;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--query") {
+      i++;
+      if (i >= args.length) fail(`${arg} requires a value`);
+      current = { query: args[i], flags: {} };
+      groups.push(current);
+    } else if (arg in FLAG_ALIASES) {
+      if (!current) {
+        fail(
+          `Flag ${arg} must follow a --query. Usage: searxng.mjs search --query "<q>" [flags] --query "<q2>" ...`
+        );
+      }
+      const key = FLAG_ALIASES[arg].replace(/^--/, "").replace(/-/g, "_");
+      i++;
+      if (i >= args.length) fail(`Flag ${FLAG_ALIASES[arg]} requires a value`);
+      current.flags[key] = args[i];
+    } else {
+      fail(`Unknown flag: ${arg}`);
+    }
+  }
+  if (!groups.length) {
+    fail(
+      "Missing query. Usage: searxng.mjs search <query> [flags] or searxng.mjs search --query \"<q>\" ..."
+    );
+  }
+  return groups;
+}
+
+async function searchOne(query, flags) {
   const params = new URLSearchParams();
   params.set("q", query);
   params.set("format", "json");
@@ -96,8 +139,7 @@ async function cmdSearch() {
     fail(`SearXNG returned HTTP ${res.status}`, await res.text().catch(() => null));
   }
   const data = await res.json();
-  const out = {
-    ok: true,
+  return {
     query: data.query || query,
     parameters: {
       lang: flags.lang || null,
@@ -116,6 +158,37 @@ async function cmdSearch() {
       publishedDate: r.publishedDate || null,
     })),
   };
+}
+
+async function cmdSearch() {
+  const raw = process.argv.slice(3);
+  let groups;
+  if (!raw.length || raw[0].startsWith("--")) {
+    groups = parseQueryGroups(raw);
+  } else {
+    if (!raw[0]) {
+      fail("Missing query. Usage: searxng.mjs search <query> [flags]");
+    }
+    if (raw.some((a) => a === "--query")) {
+      fail(
+        'Cannot mix a positional query with --query groups. Use either: search "<query>" [flags] OR search --query "<q>" [flags] ...'
+      );
+    }
+    groups = [{ query: raw[0], flags: parseFlags(raw.slice(1)) }];
+  }
+
+  const delayMs = Number(process.env.SEARXNG_QUERY_DELAY ?? 3000);
+  const results = [];
+  for (let i = 0; i < groups.length; i++) {
+    if (i > 0 && delayMs > 0) {
+      process.stderr.write(`[rate-limit] waiting ${delayMs}ms before next query\n`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+    results.push(await searchOne(groups[i].query, groups[i].flags));
+  }
+
+  const out =
+    groups.length === 1 ? { ok: true, ...results[0] } : { ok: true, searches: results };
   process.stdout.write(JSON.stringify(out, null, 2) + "\n");
 }
 

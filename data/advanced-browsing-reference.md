@@ -124,3 +124,17 @@ For click, login, tabs and other complex workflows. Full guide: `<skill_dir>/scr
 exec node <skill_dir>/scripts/cloak/cloak-script.mjs \
   --script "<skill_dir>/scripts/cloak/scripts/<your-script>.mjs"
 ```
+
+## SearXNG — `searxng.mjs`
+
+Tuning del rate-limit della modalità multi-query (serie con pausa tra le query).
+
+### Env var
+
+| Var | Valore | Default |
+|---|---|---|
+| `SEARXNG_QUERY_DELAY` | Pausa in ms tra query consecutive della modalità multi-query; `0` la disattiva | `3000` |
+
+```bash
+SEARXNG_QUERY_DELAY=5000 exec node <skill_dir>/scripts/searxng/searxng.mjs search --query "q1" --query "q2"
+```
