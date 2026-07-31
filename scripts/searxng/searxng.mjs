@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { execSync } from "node:child_process";
+
 const SEARXNG_BASE = "http://localhost:8080";
 const subcommand = process.argv[2];
 
@@ -77,36 +79,98 @@ async function cmdSearch() {
 
   const url = `${SEARXNG_BASE}/search?${params.toString()}`;
 
+  let res;
   try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      fail(`SearXNG returned HTTP ${res.status}`, await res.text().catch(() => null));
-    }
-    const data = await res.json();
-    const out = {
-      ok: true,
-      query: data.query || query,
-      parameters: {
-        lang: flags.lang || null,
-        categories: flags.categories || "general",
-        time_range: flags.time_range || null,
-        engines: flags.engines || null,
-        page: flags.page || 1,
-      },
-      result_count: (data.results || []).length,
-      results: (data.results || []).map((r) => ({
-        title: r.title,
-        url: r.url,
-        snippet: r.content,
-        engine: r.engine,
-        category: r.category,
-        publishedDate: r.publishedDate || null,
-      })),
-    };
-    process.stdout.write(JSON.stringify(out, null, 2) + "\n");
+    res = await fetch(url);
   } catch (err) {
-    fail(`Connection to SearXNG failed: ${err.message}`);
+    if (!(await tryRecover())) {
+      fail(`Connection to SearXNG failed: ${err.message}`);
+    }
+    try {
+      res = await fetch(url);
+    } catch (err2) {
+      fail(`Connection to SearXNG failed after restart: ${err2.message}`);
+    }
   }
+  if (!res.ok) {
+    fail(`SearXNG returned HTTP ${res.status}`, await res.text().catch(() => null));
+  }
+  const data = await res.json();
+  const out = {
+    ok: true,
+    query: data.query || query,
+    parameters: {
+      lang: flags.lang || null,
+      categories: flags.categories || "general",
+      time_range: flags.time_range || null,
+      engines: flags.engines || null,
+      page: flags.page || 1,
+    },
+    result_count: (data.results || []).length,
+    results: (data.results || []).map((r) => ({
+      title: r.title,
+      url: r.url,
+      snippet: r.content,
+      engine: r.engine,
+      category: r.category,
+      publishedDate: r.publishedDate || null,
+    })),
+  };
+  process.stdout.write(JSON.stringify(out, null, 2) + "\n");
+}
+
+async function tryRecover() {
+  let ids = [];
+  try {
+    const out = execSync("docker ps -aq", {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    ids = out.trim().split(/\s+/).filter(Boolean);
+  } catch (err) {
+    process.stderr.write(`[recovery] docker unavailable: ${err.message}\n`);
+    return false;
+  }
+  let target = null;
+  for (const id of ids) {
+    try {
+      const cfg = execSync(`docker inspect ${id} --format '{{json .Config.ExposedPorts}}'`, {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      const ports = JSON.parse(cfg.trim() || "{}");
+      if (ports && "8080/tcp" in ports) {
+        target = id;
+        break;
+      }
+    } catch {}
+  }
+  if (!target) {
+    process.stderr.write(
+      "[recovery] no SearXNG container exposing :8080 found, manual restart required\n"
+    );
+    return false;
+  }
+  process.stderr.write(`[recovery] restarting SearXNG container (${target})...\n`);
+  try {
+    execSync(`docker restart ${target}`, { stdio: "pipe" });
+  } catch (err) {
+    process.stderr.write(`[recovery] docker restart failed: ${err.message}\n`);
+    return false;
+  }
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`${SEARXNG_BASE}/search?format=json&q=health`);
+      if (res.ok) {
+        process.stderr.write("[recovery] SearXNG is back up\n");
+        return true;
+      }
+    } catch {}
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  process.stderr.write("[recovery] SearXNG did not respond within 30s\n");
+  return false;
 }
 
 async function cmdHealth() {

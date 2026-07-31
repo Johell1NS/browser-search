@@ -76,6 +76,10 @@ Use `--engines` only when you need to restrict to specific engines, e.g. `--engi
 
 **Troubleshooting — container down:**
 
+`searxng.mjs search` auto-recovers a stopped SearXNG container: on a connection failure it finds the container exposing port 8080, restarts it, waits for it to come back up, and retries the search once.
+
+Manual fallback:
+
 ```bash
 cd <searxng-dir> && docker compose up -d
 ```
