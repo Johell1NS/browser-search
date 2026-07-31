@@ -280,6 +280,10 @@ async function tryCamofoxTabEvaluate(url, expr, opts) {
   return evalRes;
 }
 
+async function tryCamofoxRenderedText(url, opts) {
+  return tryCamofoxTabEvaluate(url, 'document.body.innerText', opts);
+}
+
 async function tryCloak(url, opts) {
   const start = Date.now();
   log(`CloakBrowser fetch: ${url}`);
@@ -399,7 +403,21 @@ async function processUrlCamofox(url, opts) {
     steps[steps.length - 1].fallbackReason = poor.motivo;
   }
 
-  return { url, ok: false, content: best?.content || null, chars: best?.chars || 0, title: best?.title || null, reason: steps[steps.length - 1]?.fallbackReason || 'Camofox fallito', steps, elapsedMs: Date.now() - urlStart };
+  const s3 = await tryCamofoxRenderedText(url, opts);
+  steps.push({ tool: 'camofox-render-text', ok: !s3.fallito, motivo: s3.motivo || null, elapsedMs: s3.elapsedMs });
+  if (!s3.fallito && s3.data?.result != null) {
+    const rendered = smartStringify(s3.data.result);
+    if (!isEmptyResult(rendered)) {
+      const poor = isPoorContent(rendered, opts.minChars);
+      if (!poor.poor) {
+        return { url, ok: true, content: rendered, chars: rendered.length, title: best?.title || null, source: 'camofox-render-text', steps, elapsedMs: Date.now() - urlStart };
+      }
+      steps[steps.length - 1].fallbackReason = poor.motivo;
+    }
+  }
+
+  const last = steps[steps.length - 1];
+  return { url, ok: false, content: best?.content || null, chars: best?.chars || 0, title: best?.title || null, reason: last?.fallbackReason || last?.motivo || 'Camofox fallito', steps, elapsedMs: Date.now() - urlStart };
 }
 
 async function processUrlCloak(url, opts) {
