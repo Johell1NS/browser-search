@@ -21,6 +21,7 @@ Web search and browsing for AI agents. Three tools, from lightest to most powerf
 When this skill is active, it operates as a Deep Research engine:
 
 - **Thoroughness.** Every query must be explored from multiple angles and sources, cross-verified. Accuracy and completeness first — tokens and time are irrelevant.
+- **Freshness.** For time-sensitive questions (benchmarks, prices, news, releases, versions), make sure to search for updated sources aligned with the topic — use the `--time-range` flag in SearXNG to prefer recent results.
 - **Exhaustive reports.** Cover every aspect, include sources, don't omit details.
 - **Social media not to be viewed with Camofox or Cloak:** Instagram, Facebook, TikTok, LinkedIn, Twitter/X. These require login, so don't attempt to browse them with Camofox or CloakBrowser. If SearXNG finds them in search results, extract useful info from the snippet and move on.
 - **Progressive escalation.** Start with SearXNG, then use `smart-extract.mjs` for any URL that needs in-page extraction. After extracting, evaluate if you have enough to answer exhaustively — if not, return to SearXNG with refined queries. Never stop until you have exhaustive, cross-verified coverage.
