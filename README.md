@@ -78,6 +78,26 @@ results with Camofox (or CloakBrowser if the site is protected).
   package.json, everything works everywhere. Just ask your agent
   how to convert the skill for its environment.
 
+## Why it's different
+
+Most web tools for AI agents stop where the wall starts: when a site
+throws a Cloudflare or Akamai challenge, they hand back an error and
+the agent gives up. browser-search is built to walk through instead.
+
+- **Search → browse → bypass in one skill.** No manual integration,
+  no per-query costs, no API keys to buy.
+- **Three-tier escalation.** SearXNG for milliseconds-fast search,
+  Camofox for the ~90% of standard sites, CloakBrowser when the site
+  plays hardball — automatically, with zero human intervention.
+- **Proven anti-bot results.** CloakBrowser applies 58 C++ source-level
+  patches and scores 0.9 on reCAPTCHA v3 (human-level, server-verified),
+  clearing Cloudflare, Turnstile, DataDome, Akamai, Imperva, PerimeterX
+  and DDoS-Guard — where other tools just return `blocked_by_challenge`.
+- **Free, private, self-hosted.** SearXNG, Camofox and CloakBrowser all
+  run on your machine. Zero cost, unlimited, nothing metered.
+
+Where other tools give up, browser-search keeps going.
+
 ## 🏆 State of the art
 
 These three tools were chosen because they represent the current

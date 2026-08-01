@@ -42,6 +42,17 @@ Le flux typique : l'agent recherche d'abord avec SearXNG, puis navigue dans les 
 
 - **Fonctionne avec n'importe quel agent.** Le SKILL.md est écrit pour OpenCode, mais la logique est identique pour tout agent IA. Même README, même package.json, tout fonctionne partout. Demandez simplement à votre agent de convertir la skill pour son environnement.
 
+## Pourquoi c'est différent
+
+La plupart des outils web pour agents IA s'arrêtent là où commence le mur : quand un site présente un défi Cloudflare ou Akamai, ils renvoient une erreur et l'agent abandonne. browser-search est conçu pour le traverser.
+
+- **Recherche → navigation → bypass dans une seule skill.** Aucune intégration manuelle, aucun coût par requête, aucune clé API à acheter.
+- **Escalade à trois niveaux.** SearXNG pour une recherche en millisecondes, Camofox pour ~90 % des sites standard, CloakBrowser quand le site joue dur — automatiquement, sans intervention humaine.
+- **Résultats anti-bot prouvés.** CloakBrowser applique 58 correctifs au niveau du code source C++ et obtient 0.9 sur reCAPTCHA v3 (niveau humain, vérifié côté serveur), franchissant Cloudflare, Turnstile, DataDome, Akamai, Imperva, PerimeterX et DDoS-Guard — là où d'autres outils ne renvoient que `blocked_by_challenge`.
+- **Gratuit, privé, auto-hébergé.** SearXNG, Camofox et CloakBrowser tournent tous sur votre machine. Coût zéro, illimité, rien de facturé à l'usage.
+
+Là où les autres outils abandonnent, browser-search continue.
+
 ## 🏆 État de l'art
 
 Ces trois outils ont été choisis parce qu'ils représentent l'état de l'art actuel disponible aujourd'hui. Une skill comme celle-ci est conçue pour évoluer : lorsque de meilleurs outils émergent, il suffit de mettre à jour la SKILL.md pour les remplacer. 🔄

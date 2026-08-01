@@ -42,6 +42,17 @@
 
 - **适用于任何代理。** SKILL.md是为OpenCode编写的，但其逻辑适用于任何AI代理。相同的README，相同的package.json，一切随处可用。只需询问你的代理如何根据其环境转换该技能。
 
+## 为什么与众不同
+
+大多数面向 AI 代理的网页工具都在墙前止步：当网站抛出 Cloudflare 或 Akamai 验证挑战时，它们只返回一个错误，代理便放弃了。browser-search 生来就是为了穿过这堵墙。
+
+- **一个技能完成 搜索 → 浏览 → 绕过。** 无需手动集成，无需按次计费，无需购买 API 密钥。
+- **三级升级机制。** SearXNG 用于毫秒级搜索，Camofox 处理约 90% 的常规网站，CloakBrowser 在网站设下难关时出手 — 全自动，无需人工干预。
+- **经过验证的反机器人能力。** CloakBrowser 应用了 58 个 C++ 源码级补丁，reCAPTCHA v3 得分 0.9（人类水平，服务器验证），可突破 Cloudflare、Turnstile、DataDome、Akamai、Imperva、PerimeterX 和 DDoS-Guard — 而其他工具只会返回 `blocked_by_challenge`。
+- **免费、私密、自托管。** SearXNG、Camofox 和 CloakBrowser 都在你的机器上运行。零成本、无限制、不计费。
+
+在别人止步的地方，browser-search 继续前行。
+
 ## 🏆 技术前沿
 
 选择这三个工具是因为它们代表了当前市场的最高水平。这样的技能设计就是为了不断进化：当更好的工具出现时，只需更新 SKILL.md 中的几行代码即可完成替换。🔄
