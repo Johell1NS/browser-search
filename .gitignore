@@ -24,6 +24,9 @@ profile/
 # Workspace config
 AGENTS.md
 
+# Personal workspace (notes, plans, marketing)
+extra-gitignore/
+
 # OS files
 .DS_Store
 Thumbs.db
