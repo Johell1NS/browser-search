@@ -146,6 +146,8 @@ node scripts/cloak/cloak-fetch.mjs "https://protected-site.com" --proxy socks5:/
 node scripts/cloak/cloak-fetch.mjs "https://example.com" --format markdown
 ```
 
+> **版本说明：** browser-search 固定使用 CloakBrowser `^0.5.5` 和 Playwright Core `1.62.1`。CloakBrowser 0.5.x 增加了 **Linux arm64**（树莓派）支持和 Windows 修复。已知问题：在 Windows 上使用 **Pro** 许可证时，浏览器可能在启动约 10 秒后退出（[#479](https://github.com/CloakHQ/cloakbrowser/issues/479)）— 解决方法：`--license-through-proxy`。
+
 ## 为什么同时使用Camofox和CloakBrowser？
 
 因为速度和隐身是一种权衡，正确的工具取决于网站。

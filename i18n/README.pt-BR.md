@@ -146,6 +146,8 @@ node scripts/cloak/cloak-fetch.mjs "https://protected-site.com" --proxy socks5:/
 node scripts/cloak/cloak-fetch.mjs "https://example.com" --format markdown
 ```
 
+> **Nota de versão:** o browser-search fixa CloakBrowser `^0.5.5` e Playwright Core `1.62.1`. O CloakBrowser 0.5.x adiciona suporte **Linux arm64** (Raspberry Pi) e correções do Windows. Problema conhecido: no Windows com uma licença **Pro**, o navegador pode sair ~10s após a inicialização ([#479](https://github.com/CloakHQ/cloakbrowser/issues/479)) — solução: `--license-through-proxy`.
+
 ## Por que tanto Camofox quanto CloakBrowser?
 
 Porque velocidade e furtividade são um tradeoff, e a ferramenta certa depende do site.

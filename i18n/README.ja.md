@@ -146,6 +146,8 @@ node scripts/cloak/cloak-fetch.mjs "https://protected-site.com" --proxy socks5:/
 node scripts/cloak/cloak-fetch.mjs "https://example.com" --format markdown
 ```
 
+> **バージョンについて:** browser-searchはCloakBrowser `^0.5.5`とPlaywright Core `1.62.1`を固定しています。CloakBrowser 0.5.xは**Linux arm64**（Raspberry Pi）のサポートとWindowsの修正を追加します。既知の問題：Windowsで**Pro**ライセンスの場合、起動から約10秒後にブラウザが終了することがあります（[#479](https://github.com/CloakHQ/cloakbrowser/issues/479)）— 回避策：`--license-through-proxy`。
+
 ## なぜCamofoxとCloakBrowserの両方なのか？
 
 スピードとステルスはトレードオフの関係であり、適切なツールはサイトによって異なるからです。
