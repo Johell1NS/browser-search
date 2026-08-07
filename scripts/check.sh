@@ -58,9 +58,8 @@ cloak_pkg_ok() {
 
 cloak_version() {
     (cd "$SCRIPT_DIR" && node -e "
-      import { createRequire } from 'module';
-      const require = createRequire(import.meta.url);
-      console.log(require('cloakbrowser/package.json').version);
+      import { readFileSync } from 'fs';
+      console.log(JSON.parse(readFileSync('node_modules/cloakbrowser/package.json', 'utf8')).version);
     " 2>/dev/null) || echo 'not installed'
 }
 
