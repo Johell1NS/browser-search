@@ -5,7 +5,7 @@
 //
 // v1.1.0 — Added per-origin sessions, WebRTC IP spoofing.
 
-import { launch, launchPersistentContext } from 'cloakbrowser';
+import { launch, launchPersistentContext, CloakBrowserLicenseError } from 'cloakbrowser';
 import { resolve, dirname, sep } from 'path';
 import { fileURLToPath } from 'url';
 import { realpath } from 'node:fs/promises';
@@ -180,6 +180,10 @@ async function main() {
 
     process.stdout.write(JSON.stringify({ ok: true, data: result ?? null }) + '\n');
   } catch (err) {
+    if (err instanceof CloakBrowserLicenseError) {
+      process.stderr.write(JSON.stringify({ error: err.message, license: true }) + '\n');
+      process.exit(2);
+    }
     const errObj = { error: err.message };
     if (opts.verbose) errObj.stack = err.stack;
     process.stderr.write(JSON.stringify(errObj) + '\n');
