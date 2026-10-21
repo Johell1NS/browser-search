@@ -1,11 +1,79 @@
 #!/usr/bin/env node
 
-import { writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { dirname } from "node:path";
+import { writeFileSync, mkdirSync, existsSync, statSync } from "node:fs";
+import { dirname, join, basename } from "node:path";
+import { tmpdir, homedir } from "node:os";
 import { execSync } from "node:child_process";
 import * as client from "./camofox-client.mjs";
 
 const subcommand = process.argv[2];
+
+// Tab create da questo processo e non ancora chiuse: se il processo viene interrotto
+// (segnale o scadenza interna) vengono chiuse prima di uscire, cosi' non restano orfane.
+const openTabs = new Set();
+const pendingCreates = new Set();
+let aborting = false;
+
+async function createTrackedTab(url) {
+  const p = client.createTab(url);
+  pendingCreates.add(p);
+  try {
+    const tab = await p;
+    openTabs.add(tab.tabId);
+    return tab;
+  } finally {
+    pendingCreates.delete(p);
+  }
+}
+
+async function closeTrackedTab(tabId) {
+  try { await client.closeTab(tabId); } finally { openTabs.delete(tabId); }
+}
+
+async function abortAndExit(reason, code) {
+  if (aborting) return;
+  aborting = true;
+  const grace = (ms) => new Promise((r) => setTimeout(r, ms).unref?.());
+  try {
+    if (pendingCreates.size) await Promise.race([Promise.allSettled([...pendingCreates]), grace(20000)]); // il server crea la tab anche se noi abbandoniamo la richiesta
+    await Promise.race([
+      Promise.allSettled([...openTabs].map((id) => client.closeTab(id))),
+      grace(3000),
+    ]);
+  } catch {}
+  process.stderr.write(`${reason}\n`);
+  process.stdout.write(JSON.stringify({ ok: false, error: reason }) + "\n");
+  process.exit(code);
+}
+
+process.on("SIGTERM", () => abortAndExit("interrotto (SIGTERM)", 143));
+process.on("SIGINT", () => abortAndExit("interrotto (SIGINT)", 130));
+const deadlineMs = parseInt(process.env.CAMOFOX_DEADLINE_MS, 10);
+if (deadlineMs > 0) {
+  setTimeout(() => abortAndExit(`timeout dopo ${deadlineMs} ms`, 1), deadlineMs).unref();
+}
+
+// Lo storage persistito (cookie + localStorage di ogni sito) cresce senza limite e il server lo
+// rilegge a ogni ricreazione della sessione: oltre qualche MB manda in OOM l'heap di default.
+// Lo si azzera periodicamente, solo se nessuna sessione e' attiva. Best-effort: non blocca mai il comando.
+async function maybeResetStorage() {
+  try {
+    const days = process.env.CAMOFOX_STORAGE_MAX_AGE_DAYS === undefined ? 7 : Number(process.env.CAMOFOX_STORAGE_MAX_AGE_DAYS);
+    if (!(days > 0)) return;
+    const marker = process.env.CAMOFOX_STORAGE_MARKER || join(homedir(), ".cache", "browser-search", "camofox-storage-reset");
+    try {
+      if (Date.now() - statSync(marker).mtimeMs < days * 86400000) return;
+    } catch {}
+    const h = await client.health();
+    if (h.activeSessions > 0) return;
+    await client.resetStorageState();
+    client.logStep("storage persistito azzerato (pulizia periodica)");
+    mkdirSync(dirname(marker), { recursive: true });
+    writeFileSync(marker, new Date().toISOString());
+  } catch (err) {
+    client.logStep(`pulizia storage saltata: ${String(err.message || err).slice(0, 80)}`);
+  }
+}
 
 function usage() {
   process.stderr.write(`Camofox deterministic script
@@ -14,16 +82,21 @@ Subcomandi:
   health                              Stato del browser
   start                               Avvia browser
   stop                                Ferma browser
-  readability <url1> [url2 ...]        Estrai articolo da 1+ URL
+  readability <url1> [url2 ...] [--min-chars N]
+                                       Estrai articolo da 1+ URL (con --min-chars: se troppo corto, snapshot e testo nella stessa tab)
   evaluate <url> "<expression>"        Esegui JS su un URL
   snapshot <url>                       Accessibility tree
   screenshot <url> [output-path]       Screenshot PNG
+  pdf <url> [output-path]              Salva il PDF aperto nel browser (file completo, richiede Camofox >= 1.16)
 
   tab open <url> [--wait]              Apre tab persistente, torna tabId (--wait: attende readyState)
   tab evaluate <tabId> "<expr>"        Esegui JS su tab esistente
   tab snapshot <tabId>                 Snapshot su tab esistente
   tab click <tabId> <ref>              Click su tab esistente
-  tab type <tabId> <ref> <text>        Digita su tab esistente
+  tab type <tabId> <ref> <text> [--submit] [--clear]
+                                       Digita su tab esistente (--submit: Invio finale, --clear: svuota prima)
+  tab select <tabId> <ref> "<opzione>" Seleziona un'opzione di un menu nativo
+  tab press <tabId> <key>              Premi un tasto (Enter, Escape, Tab...)
   tab scroll <tabId> [dir] [px]        Scroll su tab esistente
   tab navigate <tabId> <url>           Naviga su tab esistente
   tab screenshot <tabId> [path]        Screenshot su tab esistente
@@ -107,13 +180,13 @@ async function ensureBrowser({ forceVerify = false } = {}) {
     await new Promise((r) => setTimeout(r, delay * 1000));
     client.logStep(`Smoke test browser (attesa ${delay}s)...`);
     try {
-      const tab = await client.createTab("http://example.com");
+      const tab = await createTrackedTab("http://example.com");
       try {
         await client.evaluate(tab.tabId, "document.readyState === 'complete' || document.readyState === 'interactive' ? 'ok' : 'loading'");
         client.logStep("Smoke test superato, browser operativo");
         return;
       } finally {
-        try { await client.closeTab(tab.tabId); } catch {}
+        try { await closeTrackedTab(tab.tabId); } catch {}
       }
     } catch (e) {
       client.logStep(`Smoke test fallito: ${e.message}`);
@@ -127,7 +200,7 @@ async function withRecoverableTab(url, fn, { waitMs = 0, maxRetries = 1 } = {}) 
   let retried = false;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      tab = await client.createTab(url);
+      tab = await createTrackedTab(url);
       break;
     } catch (err) {
       if (err.status === 503 && !retried) {
@@ -141,10 +214,18 @@ async function withRecoverableTab(url, fn, { waitMs = 0, maxRetries = 1 } = {}) 
   }
   try {
     if (waitMs > 0) await new Promise((r) => setTimeout(r, waitMs));
-    return await fn(tab.tabId);
+    return await fn(tab.tabId, tab);
   } finally {
-    try { await client.closeTab(tab.tabId); } catch {}
+    try { await closeTrackedTab(tab.tabId); } catch {}
   }
+}
+
+// httpStatus/navigationOk sono presenti solo da Camofox 1.15+: con server piu' vecchi si omettono.
+function navStatus(tab) {
+  const out = {};
+  if (tab?.httpStatus !== undefined) out.httpStatus = tab.httpStatus;
+  if (tab?.navigationOk !== undefined) out.navigationOk = tab.navigationOk;
+  return out;
 }
 
 async function cmdHealth() {
@@ -162,19 +243,32 @@ async function cmdStop() {
   ok({ stopped: true });
 }
 
-async function cmdReadability(urls) {
+async function cmdReadability(urls, { minChars = 0 } = {}) {
   const results = [];
   for (const url of urls) {
     try {
       await ensureBrowser();
       let readabilityResult = null;
       let snapshotResult = null;
+      let renderedText = null;
+      let readabilityError = null;
+      let snapshotError = null;
+      let navInfo = {};
 
-      await withRecoverableTab(url, async (tabId) => {
+      await withRecoverableTab(url, async (tabId, tab) => {
+        navInfo = navStatus(tab);
         const maxAttempts = 2;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
           client.logStep(`Readability tentativo ${attempt}/${maxAttempts}...`);
-          const res = await client.readability(tabId);
+          let res = null;
+          try {
+            res = await client.readability(tabId);
+          } catch (err) {
+            // un errore della pagina (es. CSP) non va perso con gli altri risultati: si passa ai fallback nella stessa tab
+            readabilityError = err.message;
+            client.logStep(`Readability fallita (${err.message.slice(0, 80)}), passo ai fallback nella stessa tab`);
+            break;
+          }
           let parsed = null;
           if (res?.result) {
             try { parsed = JSON.parse(res.result); } catch {
@@ -193,13 +287,29 @@ async function cmdReadability(urls) {
           }
         }
 
-        if (!readabilityResult) {
-          client.logStep("Readability → null dopo 2 tentativi, fallback a snapshot...");
-          snapshotResult = await client.snapshot(tabId);
+        const tooShort = readabilityResult && minChars > 0 && readabilityResult.text.trim().length < minChars;
+        if (!readabilityResult || tooShort) {
+          client.logStep(tooShort
+            ? `Readability troppo corta (< ${minChars}), fallback a snapshot e testo nella stessa tab...`
+            : "Readability → null, fallback a snapshot e testo nella stessa tab...");
+          try {
+            snapshotResult = await client.snapshot(tabId);
+          } catch (err) {
+            snapshotError = err.message;
+          }
+          try {
+            const t = await client.evaluate(tabId, "document.body ? document.body.innerText : ''");
+            renderedText = t?.result ?? null;
+          } catch { /* il testo e' solo un ulteriore fallback */ }
         }
       }, { waitMs: 2000 });
 
-      results.push({ url, readability: readabilityResult, snapshot: snapshotResult });
+      const item = { url, readability: readabilityResult, snapshot: snapshotResult, ...navInfo };
+      if (renderedText) item.renderedText = renderedText;
+      if (snapshotError) item.snapshotError = snapshotError;
+      if (readabilityError) item.readabilityError = readabilityError;
+      if (!readabilityResult && !snapshotResult && !renderedText) item.error = readabilityError || snapshotError || "nessun contenuto";
+      results.push(item);
     } catch (err) {
       results.push({ url, readability: null, snapshot: null, error: err.message });
     }
@@ -209,18 +319,18 @@ async function cmdReadability(urls) {
 
 async function cmdEvaluate(url, expression) {
   await ensureBrowser();
-  const item = await withRecoverableTab(url, async (tabId) => {
+  const item = await withRecoverableTab(url, async (tabId, tab) => {
     const res = await client.evaluate(tabId, expression);
-    return { url, result: res?.result ?? res };
+    return { url, result: res?.result ?? null, ...navStatus(tab) };
   }, { waitMs: 1000 });
   ok(item);
 }
 
 async function cmdSnapshot(url) {
   await ensureBrowser();
-  const item = await withRecoverableTab(url, async (tabId) => {
+  const item = await withRecoverableTab(url, async (tabId, tab) => {
     const res = await client.snapshot(tabId);
-    return { url, snapshot: res };
+    return { url, snapshot: res, ...navStatus(tab) };
   }, { waitMs: 1000 });
   ok(item);
 }
@@ -239,6 +349,41 @@ async function cmdScreenshot(url, outputPath) {
   ok({ screenshot: out });
 }
 
+async function cmdPdf(url, outputPath) {
+  await ensureBrowser();
+  // fail() chiama process.exit: va fuori dal callback, altrimenti il finally di withRecoverableTab non chiude la tab
+  const pdfError = (msg, details) => Object.assign(new Error(msg), { pdfError: true, details });
+  let item;
+  try {
+  item = await withRecoverableTab(url, async (tabId, tab) => {
+    let saved;
+    try {
+      saved = await client.fetchCurrentResource(tabId);
+    } catch (err) {
+      if (err.status === 415) throw pdfError("La risorsa aperta non e' un PDF", err.message);
+      if (err.status === 413) throw pdfError("PDF troppo grande (limite Camofox 50 MB)", err.message);
+      throw err;
+    }
+    const id = saved?.download?.id;
+    const list = await client.downloads(tabId, { includeData: true, maxBytes: 50 * 1024 * 1024 });
+    const items = Array.isArray(list?.downloads) ? list.downloads : [];
+    const dl = items.find((d) => d.id === id) || items[items.length - 1];
+    if (!dl?.dataBase64) throw pdfError("Dati del PDF non disponibili", dl?.dataSkipped || dl?.readError || "download vuoto");
+    const buf = Buffer.from(dl.dataBase64, "base64");
+    const name = basename(dl.suggestedFilename || "document.pdf").replace(/[^\w.-]/g, "_");
+    const out = outputPath || join(tmpdir(), `camofox_${name.endsWith(".pdf") ? name : name + ".pdf"}`);
+    const dir = dirname(out);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(out, buf);
+    return { url, pdf: out, bytes: buf.length, ...navStatus(tab) };
+  }, { waitMs: 1000 });
+  } catch (err) {
+    if (err.pdfError) fail(err.message, err.details);
+    throw err;
+  }
+  ok(item);
+}
+
 async function cmdTab(sub, args) {
   switch (sub) {
     case "open": {
@@ -251,7 +396,7 @@ async function cmdTab(sub, args) {
       let retried = false;
       for (let attempt = 0; attempt <= 1; attempt++) {
         try {
-          tab = await client.createTab(url);
+          tab = await createTrackedTab(url);
           break;
         } catch (err) {
           if (err.status === 503 && !retried) {
@@ -267,14 +412,15 @@ async function cmdTab(sub, args) {
         await new Promise((r) => setTimeout(r, waitMs));
         await client.evaluate(tab.tabId, "void 0").catch(() => {});
       }
-      ok({ tabId: tab.tabId, url: tab.url || url });
+      openTabs.delete(tab.tabId); // deve restare aperta per i comandi successivi
+      ok({ tabId: tab.tabId, url: tab.url || url, ...navStatus(tab) });
       return;
     }
     case "evaluate": {
       if (args.length < 2) usage();
       const [tabId, ...exprParts] = args;
       const res = await client.evaluate(tabId, exprParts.join(" "));
-      ok({ result: res?.result ?? res });
+      ok({ result: res?.result ?? null });
       return;
     }
     case "snapshot": {
@@ -291,8 +437,24 @@ async function cmdTab(sub, args) {
     }
     case "type": {
       if (args.length < 3) usage();
-      const [tabId, ref, ...textParts] = args;
-      const res = await client.type(tabId, ref, textParts.join(" "));
+      const [tabId, ref, ...rest] = args;
+      const submit = rest.includes("--submit");
+      const clear = rest.includes("--clear");
+      const textParts = rest.filter((a) => a !== "--submit" && a !== "--clear");
+      const res = await client.type(tabId, ref, textParts.join(" "), { submit, clear });
+      ok(res);
+      return;
+    }
+    case "select": {
+      if (args.length < 3) usage();
+      const [tabId, ref, ...optParts] = args;
+      const res = await client.select(tabId, ref, optParts.join(" "));
+      ok(res);
+      return;
+    }
+    case "press": {
+      if (args.length < 2) usage();
+      const res = await client.press(args[0], args[1]);
       ok(res);
       return;
     }
@@ -362,6 +524,10 @@ async function cmdTab(sub, args) {
 
 const [,, , ...args] = process.argv;
 
+if (["readability", "evaluate", "snapshot", "screenshot", "pdf"].includes(subcommand) || (subcommand === "tab" && args[0] === "open")) {
+  await maybeResetStorage();
+}
+
 switch (subcommand) {
   case "health":
     await cmdHealth();
@@ -373,8 +539,11 @@ switch (subcommand) {
     await cmdStop();
     break;
   case "readability": {
-    if (args.length === 0) usage();
-    await cmdReadability(args);
+    const mcIdx = args.indexOf("--min-chars");
+    const minChars = mcIdx >= 0 ? parseInt(args[mcIdx + 1], 10) || 0 : 0;
+    const urls = args.filter((a, i) => !(a === "--min-chars" || (mcIdx >= 0 && i === mcIdx + 1)));
+    if (urls.length === 0) usage();
+    await cmdReadability(urls, { minChars });
     break;
   }
   case "evaluate": {
@@ -391,6 +560,11 @@ switch (subcommand) {
   case "screenshot": {
     if (args.length === 0) usage();
     await cmdScreenshot(args[0], args[1] || null);
+    break;
+  }
+  case "pdf": {
+    if (args.length === 0) usage();
+    await cmdPdf(args[0], args[1] || null);
     break;
   }
   case "tab": {

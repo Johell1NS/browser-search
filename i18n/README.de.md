@@ -9,7 +9,7 @@
   <a href="https://github.com/Johell1NS/browser-search"><img src="https://img.shields.io/github/stars/Johell1NS/browser-search" alt="GitHub stars"></a>
   <a href="https://github.com/Johell1NS/browser-search/issues"><img src="https://img.shields.io/github/issues/Johell1NS/browser-search" alt="GitHub issues"></a>
   <a href="../LICENSE"><img src="https://img.shields.io/github/license/Johell1NS/browser-search" alt="License: MIT"></a>
-  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen" alt="Node.js >=20"></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D20.19-brightgreen" alt="Node.js >=20.19"></a>
   <a href="https://github.com/Johell1NS/browser-search/discussions"><img src="https://img.shields.io/badge/Discussions-GitHub-333333?logo=github&logoColor=white" alt="Discussions"></a>
   <a href="https://x.com/Johell1NS"><img src="https://img.shields.io/badge/-Follow%20updates-333333?logo=x" alt="Follow updates"></a>
 </p>
@@ -156,7 +156,7 @@ node scripts/cloak/cloak-fetch.mjs "https://protected-site.com" --proxy socks5:/
 node scripts/cloak/cloak-fetch.mjs "https://example.com" --format markdown
 ```
 
-> **Hinweis zur Version:** browser-search pinnt CloakBrowser `^0.5.5` und Playwright Core `1.62.1`. CloakBrowser 0.5.x fügt **Linux-arm64**-Unterstützung (Raspberry Pi) und Windows-Fixes hinzu. Bekanntes Problem: unter Windows mit einer **Pro**-Lizenz kann der Browser ~10s nach dem Start beendet werden ([#479](https://github.com/CloakHQ/cloakbrowser/issues/479)) — Workaround: `--license-through-proxy`.
+> **Hinweis zur Version:** browser-search pinnt CloakBrowser `^0.6.3` und Playwright Core `1.64.1`. CloakBrowser 0.6 erfordert Node.js 20.19+ oder 22.12+. Der Skill verwendet das kostenlose CloakBrowser-Binary (Chromium 146; 145 unter macOS), das keinen Lizenzschlüssel benötigt; die Wrapper-Updates (Linux-arm64-Unterstützung, sichererer Binary-Download, stabiler Fingerprint pro persistentem Profil, zuverlässigere humanisierte Aktionen) gelten auch dafür. Ein kostenloser Schlüssel (GitHub-Anmeldung über `cloakbrowser login`) schaltet das neueste Binary mit einer gleichzeitigen Sitzung frei; der Skill nutzt ihn weder noch verlangt er ihn.
 
 ## Warum sowohl Camofox als auch CloakBrowser?
 
@@ -237,6 +237,24 @@ browser-search stellt keine plattformspezifischen docker-compose-Dateien oder In
 | SearXNG | Docker, `:8080` | [docs.searxng.org](https://docs.searxng.org/admin/installation-docker.html) |
 | Camofox | Docker, `:9377` | [github.com/jo-inc/camofox-browser](https://github.com/jo-inc/camofox-browser) |
 | CloakBrowser | npm (requires `npm install` in skill dir + `ensureBinary`) | `scripts/cloak/cloak-fetch.mjs` |
+
+**SearXNG-Konfiguration (erforderlich)**
+
+Die Standardinstallation von SearXNG hat die JSON-Ausgabe **deaktiviert**, die Skill braucht sie aber: ohne sie scheitert das Skript mit `HTTP 403`. Verwende in der `settings.yml` von SearXNG (im offiziellen Docker-Setup der Ordner `core-config`):
+
+```yaml
+use_default_settings: true
+server:
+  secret_key: "<random>"   # or set SEARXNG_SECRET
+  limiter: false           # local instance: the limiter would block the script's JSON requests
+search:
+  formats: [html, json]
+```
+
+- `use_default_settings: true` hält Engines und Standardwerte bei jedem Update auf dem Stand des Upstream-Projekts. Um zusätzliche Engines zu aktivieren, füge z. B. unter `engines:` den Eintrag `- name: bing` mit `disabled: false` hinzu.
+- Lokal halten: SearXNG an `127.0.0.1` binden (`SEARXNG_HOST=127.0.0.1` in `.env`).
+- Valkey/Redis wird von der Skill **nicht benötigt** (SearXNG nutzt es nur für den Limiter, der ausgeschaltet bleibt).
+- Läuft SearXNG nicht unter `http://127.0.0.1:8080`, setze `SEARXNG_URL`.
 
 **Für den KI-Agenten — lesen Sie diese Dateien:**
 

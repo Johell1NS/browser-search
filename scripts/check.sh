@@ -104,6 +104,8 @@ if searxng_api_ok; then
     LABEL="${SEARXNG_URL}"
     if [ -n "$SEARXNG_NAME" ]; then LABEL="$SEARXNG_NAME ($SEARXNG_URL)"; fi
     ok "SearXNG running (${LABEL}, ${RESULT_COUNT} results in test query)"
+elif [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${SEARXNG_URL}?format=json&q=health" 2>/dev/null)" = "403" ]; then
+    warn "SearXNG responds but JSON output is disabled (add 'json' to search.formats in settings.yml, see README)"
 elif [ -n "$SEARXNG_NAME" ]; then
     warn "SearXNG container running ($SEARXNG_NAME) but API not responding at ${SEARXNG_URL}"
 elif docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qE 'searxng'; then
@@ -121,16 +123,17 @@ if camofox_api_ok; then
     HEALTH=$(curl -s --max-time 5 "${CAMOFOX_URL}/health" 2>/dev/null || echo "")
     BROWSER_OK=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('browserConnected','?'))" 2>/dev/null || echo "?")
     TAB_COUNT=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('activeTabs','?'))" 2>/dev/null || echo "?")
+    HEAP_MB=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('memory',{}).get('heapUsedMb','?'))" 2>/dev/null || echo "?")
     LABEL="${CAMOFOX_URL}"
     if [ -n "$CAMOFOX_NAME" ]; then LABEL="$CAMOFOX_NAME ($CAMOFOX_URL)"; fi
-    ok "Camofox running (${LABEL}, browserConnected: ${BROWSER_OK}, tabs: ${TAB_COUNT})"
+    ok "Camofox running (${LABEL}, browserConnected: ${BROWSER_OK}, tabs: ${TAB_COUNT}, heap: ${HEAP_MB} MB)"
 elif [ -n "$CAMOFOX_NAME" ]; then
     warn "Camofox container running ($CAMOFOX_NAME) but API not responding at ${CAMOFOX_URL}"
 elif docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qE 'camofox'; then
     warn "Camofox container exists but is not running"
 else
     warn "Camofox container not found"
-    info "Image: ghcr.io/jo-inc/camofox-browser:latest"
+    info "Image: ghcr.io/jo-inc/camofox-browser (recommended tag and flags: docker/setup.md)"
     info "See docker/setup.md"
 fi
 sep

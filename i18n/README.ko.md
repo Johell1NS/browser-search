@@ -9,7 +9,7 @@
   <a href="https://github.com/Johell1NS/browser-search"><img src="https://img.shields.io/github/stars/Johell1NS/browser-search" alt="GitHub stars"></a>
   <a href="https://github.com/Johell1NS/browser-search/issues"><img src="https://img.shields.io/github/issues/Johell1NS/browser-search" alt="GitHub issues"></a>
   <a href="../LICENSE"><img src="https://img.shields.io/github/license/Johell1NS/browser-search" alt="License: MIT"></a>
-  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen" alt="Node.js >=20"></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D20.19-brightgreen" alt="Node.js >=20.19"></a>
   <a href="https://github.com/Johell1NS/browser-search/discussions"><img src="https://img.shields.io/badge/Discussions-GitHub-333333?logo=github&logoColor=white" alt="Discussions"></a>
   <a href="https://x.com/Johell1NS"><img src="https://img.shields.io/badge/-Follow%20updates-333333?logo=x" alt="Follow updates"></a>
 </p>
@@ -156,7 +156,7 @@ node scripts/cloak/cloak-fetch.mjs "https://protected-site.com" --proxy socks5:/
 node scripts/cloak/cloak-fetch.mjs "https://example.com" --format markdown
 ```
 
-> **버전 참고:** browser-search는 CloakBrowser `^0.5.5` 및 Playwright Core `1.62.1`을 고정합니다. CloakBrowser 0.5.x는 **Linux arm64**(Raspberry Pi) 지원과 Windows 수정을 추가합니다. 알려진 문제: Windows에서 **Pro** 라이선스를 사용하는 경우 브라우저가 시작 후 약 10초 후에 종료될 수 있습니다([#479](https://github.com/CloakHQ/cloakbrowser/issues/479)) — 해결 방법: `--license-through-proxy`.
+> **버전 참고:** browser-search는 CloakBrowser `^0.6.3` 및 Playwright Core `1.64.1`을 고정합니다. CloakBrowser 0.6은 Node.js 20.19+ 또는 22.12+가 필요합니다. 이 스킬은 라이선스 키가 필요 없는 CloakBrowser 무료 바이너리(Chromium 146; macOS에서는 145)를 사용하며, 래퍼 업데이트(Linux arm64 지원, 더 안전한 바이너리 다운로드, 영구 프로필별 안정적인 핑거프린트, 더 신뢰할 수 있는 휴머나이즈 동작)도 여기에 적용됩니다. 무료 키(`cloakbrowser login`을 통한 GitHub 로그인)는 동시 세션 1개로 최신 바이너리를 사용할 수 있게 해 주지만, 이 스킬은 이를 사용하지도 요구하지도 않습니다.
 
 ## 왜 Camofox와 CloakBrowser 둘 다인가?
 
@@ -237,6 +237,24 @@ browser-search는 플랫폼별 docker-compose 파일이나 설치 스크립트�
 | SearXNG | Docker, `:8080` | [docs.searxng.org](https://docs.searxng.org/admin/installation-docker.html) |
 | Camofox | Docker, `:9377` | [github.com/jo-inc/camofox-browser](https://github.com/jo-inc/camofox-browser) |
 | CloakBrowser | npm (requires `npm install` in skill dir + `ensureBinary`) | `scripts/cloak/cloak-fetch.mjs` |
+
+**SearXNG 설정 (필수)**
+
+SearXNG 기본 설치는 JSON 출력이 **꺼져** 있지만 스킬에는 필요합니다. 꺼져 있으면 스크립트가 `HTTP 403`으로 실패합니다. SearXNG의 `settings.yml`(공식 Docker 설정에서는 `core-config` 폴더)에 다음을 사용하세요:
+
+```yaml
+use_default_settings: true
+server:
+  secret_key: "<random>"   # or set SEARXNG_SECRET
+  limiter: false           # local instance: the limiter would block the script's JSON requests
+search:
+  formats: [html, json]
+```
+
+- `use_default_settings: true`는 업데이트할 때마다 엔진과 기본값을 업스트림과 맞춰 줍니다. 엔진을 추가로 켜려면 `engines:` 아래에 `- name: bing`과 `disabled: false` 같은 항목을 추가하세요.
+- 로컬로 유지하세요: SearXNG를 `127.0.0.1`에 바인딩합니다(`.env`의 `SEARXNG_HOST=127.0.0.1`).
+- 스킬에는 Valkey/Redis가 **필요하지 않습니다**(SearXNG는 limiter에만 사용하며, limiter는 꺼 둡니다).
+- SearXNG가 `http://127.0.0.1:8080`에 없다면 `SEARXNG_URL`을 설정하세요.
 
 **AI 에이전트용 — 다음 파일을 읽으세요:**
 

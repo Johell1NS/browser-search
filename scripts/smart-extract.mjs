@@ -72,11 +72,15 @@ function log(msg) {
 function run(cmd, args, opts = {}) {
   const spawnCmd = cmd.endsWith('.mjs') ? process.execPath : cmd;
   const spawnArgs = cmd.endsWith('.mjs') ? [cmd, ...args] : args;
+  const timeout = opts.timeout || 30000;
+  // camofox.mjs si ferma da solo (chiudendo le sue tab) poco prima che il kill lo colpisca
+  const env = cmd === CAMOFOX ? { ...process.env, CAMOFOX_DEADLINE_MS: String(Math.max(timeout - 3000, 2000)) } : process.env;
   return new Promise((resolve) => {
     const child = execFile(spawnCmd, spawnArgs, {
-      timeout: opts.timeout || 30000,
       maxBuffer: 10 * 1024 * 1024,
       ...opts,
+      timeout,
+      env,
     }, (err, stdout, stderr) => {
       activeChildren.delete(child);
       const parsed = { cmd, args: args.slice(0, 3).concat(args.length > 3 ? ['...'] : []) };
@@ -236,7 +240,7 @@ async function tryCamofoxEvaluate(url, expr, opts) {
 async function tryCamofoxReadability(url, opts) {
   const start = Date.now();
   log(`Camofox readability: ${url}`);
-  const res = await run(CAMOFOX, ['readability', url], { _start: start, timeout: 30000 });
+  const res = await run(CAMOFOX, ['readability', url, '--min-chars', String(opts.minChars)], { _start: start, timeout: 45000 });
   return res;
 }
 
@@ -277,6 +281,7 @@ async function tryCamofoxTabEvaluate(url, expr, opts) {
   await run(CAMOFOX, ['tab', 'close', tabId], { timeout: 5000 }).catch(() => {});
 
   evalRes.tabOpenElapsed = openRes.elapsedMs;
+  evalRes.openData = openRes.data;
   return evalRes;
 }
 
@@ -345,12 +350,33 @@ function pickRicher(a, b) {
   return (a.chars || 0) >= (b.chars || 0) ? a : b;
 }
 
+// Stato HTTP della navigazione (Camofox 1.15+): evaluate/snapshot lo hanno in data.httpStatus,
+// readability in data.results[0].httpStatus, tab open in data.httpStatus.
+function httpStatusOf(data) {
+  const v = data?.httpStatus ?? data?.results?.[0]?.httpStatus;
+  return typeof v === 'number' ? v : null;
+}
+
 async function processUrlCamofox(url, opts) {
+  const ctx = { httpStatus: null };
+  const r = await processUrlCamofoxCore(url, opts, ctx);
+  if (ctx.httpStatus !== null) {
+    r.httpStatus = ctx.httpStatus;
+    if (ctx.httpStatus >= 400) {
+      r.warning = `HTTP ${ctx.httpStatus}: il contenuto potrebbe essere una pagina di errore o una challenge`;
+    }
+  }
+  return r;
+}
+
+async function processUrlCamofoxCore(url, opts, ctx) {
+  const note = (d) => { const v = httpStatusOf(d); if (v !== null) ctx.httpStatus = v; };
   const urlStart = Date.now();
   const steps = [];
 
   if (opts.expr) {
     const s1 = await tryCamofoxEvaluate(url, opts.expr, opts);
+    note(s1.data);
     const res1 = s1.data?.result;
     steps.push({ tool: 'camofox-evaluate', ok: !s1.fallito, motivo: s1.motivo || null, elapsedMs: s1.elapsedMs });
 
@@ -367,6 +393,7 @@ async function processUrlCamofox(url, opts) {
     }
 
     const s2 = await tryCamofoxTabEvaluate(url, opts.expr, opts);
+    note(s2.openData);
     const res2 = s2.data?.result;
     steps.push({ tool: 'camofox-tab', ok: !s2.fallito, motivo: s2.motivo || null, elapsedMs: (s2.elapsedMs || 0) + (s2.tabOpenElapsed || 0) });
 
@@ -387,11 +414,16 @@ async function processUrlCamofox(url, opts) {
     return { url, ok: false, content: lastResultStr, chars: lastResultStr?.length || 0, reason: 'Camofox fallito su entrambi i tentativi', source: steps[steps.length - 1]?.tool || 'camofox', steps, elapsedMs: Date.now() - urlStart };
   }
 
+  // Un solo caricamento: camofox.mjs readability prende nella stessa tab Readability e, se e' troppo povera,
+  // snapshot e testo renderizzato. Si ricarica la pagina solo se serve (vedi sotto).
   const s1 = await tryCamofoxReadability(url, opts);
-  steps.push({ tool: 'camofox-readability', ok: !s1.fallito, motivo: s1.motivo || null, elapsedMs: s1.elapsedMs });
+  note(s1.data);
+  const item0 = s1.data?.results?.[0] || null;
+  const s1Failed = !item0 || !!item0.error;
+  steps.push({ tool: 'camofox-readability', ok: !s1.fallito && !s1Failed, motivo: s1.motivo || item0?.error || null, elapsedMs: s1.elapsedMs });
 
   let best = extractReadabilityContent(s1.data);
-  if (best && !s1.fallito) {
+  if (item0?.readability?.text && !s1Failed) {
     const poor = isPoorContent(best.content, opts.minChars);
     if (!poor.poor) {
       return { url, ok: true, content: best.content, chars: best.chars, title: best.title || '', source: 'camofox-readability', steps, elapsedMs: Date.now() - urlStart };
@@ -399,11 +431,46 @@ async function processUrlCamofox(url, opts) {
     steps[steps.length - 1].fallbackReason = poor.motivo;
   }
 
+  if (item0?.snapshot) {
+    const snap = extractSnapshotContent({ snapshot: item0.snapshot });
+    steps.push({ tool: 'camofox-snapshot', ok: true, motivo: null, sameTab: true, elapsedMs: 0 });
+    best = pickRicher(best, snap);
+    if (best) {
+      const poor = isPoorContent(best.content, opts.minChars);
+      if (!poor.poor) {
+        return { url, ok: true, content: best.content, chars: best.chars, title: best.title || '', source: 'camofox-snapshot', steps, elapsedMs: Date.now() - urlStart };
+      }
+      steps[steps.length - 1].fallbackReason = poor.motivo;
+    }
+  }
+
+  if (item0?.renderedText) {
+    const rendered = smartStringify(item0.renderedText);
+    steps.push({ tool: 'camofox-render-text', ok: true, motivo: null, sameTab: true, elapsedMs: 0 });
+    if (!isEmptyResult(rendered)) {
+      const poor = isPoorContent(rendered, opts.minChars);
+      if (!poor.poor) {
+        return { url, ok: true, content: rendered, chars: rendered.length, title: best?.title || null, source: 'camofox-render-text', steps, elapsedMs: Date.now() - urlStart };
+      }
+      steps[steps.length - 1].fallbackReason = poor.motivo;
+    }
+  }
+
+  // Ricarica solo se il primo tentativo e' fallito del tutto, oppure se i contenuti poveri sembrano una challenge/blocco
+  // (HTTP >= 400 o pagina di errore): dopo la challenge un secondo caricamento puo' riuscire. Una pagina semplicemente
+  // corta, senza segni di blocco, non viene ricaricata inutilmente.
+  const blockHint = (ctx.httpStatus !== null && ctx.httpStatus >= 400) || isErrorPage(best?.content);
+  if (!s1Failed && !blockHint) {
+    const last = steps[steps.length - 1];
+    return { url, ok: false, content: best?.content || null, chars: best?.chars || 0, title: best?.title || null, reason: last?.fallbackReason || last?.motivo || 'Camofox fallito', steps, elapsedMs: Date.now() - urlStart };
+  }
+
   const s2 = await tryCamofoxSnapshot(url, opts);
+  note(s2.data);
   steps.push({ tool: 'camofox-snapshot', ok: !s2.fallito, motivo: s2.motivo || null, elapsedMs: s2.elapsedMs });
 
-  const snap = extractSnapshotContent(s2.data);
-  best = pickRicher(best, snap);
+  const snap2 = extractSnapshotContent(s2.data);
+  best = pickRicher(best, snap2);
   if (best) {
     const poor = isPoorContent(best.content, opts.minChars);
     if (!poor.poor) {
@@ -413,6 +480,7 @@ async function processUrlCamofox(url, opts) {
   }
 
   const s3 = await tryCamofoxRenderedText(url, opts);
+  note(s3.openData);
   steps.push({ tool: 'camofox-render-text', ok: !s3.fallito, motivo: s3.motivo || null, elapsedMs: s3.elapsedMs });
   if (!s3.fallito && s3.data?.result != null) {
     const rendered = smartStringify(s3.data.result);

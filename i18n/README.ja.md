@@ -9,7 +9,7 @@
   <a href="https://github.com/Johell1NS/browser-search"><img src="https://img.shields.io/github/stars/Johell1NS/browser-search" alt="GitHub stars"></a>
   <a href="https://github.com/Johell1NS/browser-search/issues"><img src="https://img.shields.io/github/issues/Johell1NS/browser-search" alt="GitHub issues"></a>
   <a href="../LICENSE"><img src="https://img.shields.io/github/license/Johell1NS/browser-search" alt="License: MIT"></a>
-  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen" alt="Node.js >=20"></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D20.19-brightgreen" alt="Node.js >=20.19"></a>
   <a href="https://github.com/Johell1NS/browser-search/discussions"><img src="https://img.shields.io/badge/Discussions-GitHub-333333?logo=github&logoColor=white" alt="Discussions"></a>
   <a href="https://x.com/Johell1NS"><img src="https://img.shields.io/badge/-Follow%20updates-333333?logo=x" alt="Follow updates"></a>
 </p>
@@ -156,7 +156,7 @@ node scripts/cloak/cloak-fetch.mjs "https://protected-site.com" --proxy socks5:/
 node scripts/cloak/cloak-fetch.mjs "https://example.com" --format markdown
 ```
 
-> **バージョンについて:** browser-searchはCloakBrowser `^0.5.5`とPlaywright Core `1.62.1`を固定しています。CloakBrowser 0.5.xは**Linux arm64**（Raspberry Pi）のサポートとWindowsの修正を追加します。既知の問題：Windowsで**Pro**ライセンスの場合、起動から約10秒後にブラウザが終了することがあります（[#479](https://github.com/CloakHQ/cloakbrowser/issues/479)）— 回避策：`--license-through-proxy`。
+> **バージョンについて:** browser-searchはCloakBrowser `^0.6.3`とPlaywright Core `1.64.1`を固定しています。CloakBrowser 0.6にはNode.js 20.19+または22.12+が必要です。このスキルはCloakBrowserの無料バイナリ（Chromium 146; macOSでは145）を使用し、ライセンスキーは不要です。ラッパーの更新（Linux arm64サポート、より安全なバイナリのダウンロード、永続プロファイルごとの安定したフィンガープリント、より信頼性の高いヒューマナイズ操作）もこれに適用されます。無料キー（`cloakbrowser login`によるGitHubサインイン）を使うと最新のバイナリが利用できますが、同時セッションは1つです。このスキルはそれを使用せず、必須でもありません。
 
 ## なぜCamofoxとCloakBrowserの両方なのか？
 
@@ -237,6 +237,24 @@ browser-searchはプラットフォーム固有のdocker-composeファイルや�
 | SearXNG | Docker, `:8080` | [docs.searxng.org](https://docs.searxng.org/admin/installation-docker.html) |
 | Camofox | Docker, `:9377` | [github.com/jo-inc/camofox-browser](https://github.com/jo-inc/camofox-browser) |
 | CloakBrowser | npm (requires `npm install` in skill dir + `ensureBinary`) | `scripts/cloak/cloak-fetch.mjs` |
+
+**SearXNG の設定（必須）**
+
+SearXNG の標準インストールでは JSON 出力が**無効**ですが、スキルには必要です。無効のままだとスクリプトは `HTTP 403` で失敗します。SearXNG の `settings.yml`（公式 Docker 構成では `core-config` フォルダ）に次を設定してください:
+
+```yaml
+use_default_settings: true
+server:
+  secret_key: "<random>"   # or set SEARXNG_SECRET
+  limiter: false           # local instance: the limiter would block the script's JSON requests
+search:
+  formats: [html, json]
+```
+
+- `use_default_settings: true` により、更新のたびにエンジンとデフォルト値が上流に追従します。エンジンを追加で有効にするには、`engines:` に `- name: bing` と `disabled: false` のようなエントリを追加します。
+- ローカルに限定してください: SearXNG を `127.0.0.1` にバインドします（`.env` の `SEARXNG_HOST=127.0.0.1`）。
+- スキルに Valkey/Redis は**不要**です（SearXNG はリミッターにのみ使用し、リミッターは無効のままです）。
+- SearXNG が `http://127.0.0.1:8080` にない場合は `SEARXNG_URL` を設定してください。
 
 **AIエージェント向け — 以下のファイルを読んでください：**
 

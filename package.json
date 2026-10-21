@@ -1,12 +1,12 @@
 {
   "name": "browser-search",
-  "version": "3.1.1",
+  "version": "3.2.0",
   "description": "Multi-tier web search & browser automation for AI agents. SearXNG + Camofox + CloakBrowser.",
   "private": false,
   "dependencies": {
-    "cloakbrowser": "^0.5.5",
+    "cloakbrowser": "^0.6.3",
     "mmdb-lib": "^3.0.3",
-    "playwright-core": "1.62.1",
+    "playwright-core": "1.64.1",
     "socks-proxy-agent": "^10.1.0"
   }
 }

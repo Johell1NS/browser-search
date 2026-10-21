@@ -117,10 +117,35 @@ async function click(tabId, ref) {
   });
 }
 
-async function type(tabId, ref, text) {
+async function type(tabId, ref, text, { submit, clear } = {}) {
   return request("POST", `/tabs/${tabId}/type`, {
-    body: { userId: USER_ID, ref, text },
+    body: { userId: USER_ID, ref, text, ...(submit ? { submit: true } : {}), ...(clear ? { clear: true } : {}) },
   });
+}
+
+async function select(tabId, ref, option) {
+  return request("POST", `/tabs/${tabId}/select`, {
+    body: { userId: USER_ID, ref, option },
+  });
+}
+
+async function press(tabId, key) {
+  return request("POST", `/tabs/${tabId}/press`, {
+    body: { userId: USER_ID, key },
+  });
+}
+
+async function fetchCurrentResource(tabId) {
+  return request("POST", `/tabs/${tabId}/fetch-current-resource`, {
+    body: { userId: USER_ID },
+  });
+}
+
+async function downloads(tabId, { includeData = false, maxBytes } = {}) {
+  const params = {};
+  if (includeData) params.includeData = "true";
+  if (maxBytes) params.maxBytes = maxBytes;
+  return request("GET", `/tabs/${tabId}/downloads`, { body: { userId: USER_ID, ...params } });
 }
 
 async function scroll(tabId, direction, amount) {
@@ -155,6 +180,11 @@ async function destroySession() {
   return request("DELETE", `/sessions/${USER_ID}`);
 }
 
+// Cancella lo storage persistito (cookie + localStorage) dell'utente; richiede il plugin persistence.
+async function resetStorageState() {
+  return request("DELETE", `/sessions/${USER_ID}/storage_state`);
+}
+
 let _readabilityJs = null;
 
 function getReadabilityJs() {
@@ -166,7 +196,12 @@ function getReadabilityJs() {
 
 async function readability(tabId) {
   const js = getReadabilityJs();
+  // Su siti con CSP Trusted Types (es. YouTube) Readability va in errore sull'innerHTML: una policy 'default'
+  // permissiva, creata solo in questa tab di estrazione, lo evita. Se la CSP vieta il nome, il try la ignora.
+  const trustedTypesPolicy =
+    "try { if (window.trustedTypes && !trustedTypes.defaultPolicy) trustedTypes.createPolicy('default', { createHTML: (s) => s }); } catch (e) {}\n";
   const expression =
+    trustedTypesPolicy +
     js +
     '; var a = new Readability(document.cloneNode(true)).parse();' +
     'JSON.stringify({title: a?.title || null, text: a?.textContent || null, excerpt: a?.excerpt || null, length: a?.length || 0})';
@@ -188,12 +223,17 @@ export {
   evaluate,
   click,
   type,
+  select,
+  press,
+  fetchCurrentResource,
+  downloads,
   scroll,
   navigate,
   extract,
   wait,
   screenshotRaw,
   destroySession,
+  resetStorageState,
   getTabs,
   readability,
   getReadabilityJs,
