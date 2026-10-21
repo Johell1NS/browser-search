@@ -35,7 +35,7 @@ The only exception is screenshot commands (which save a PNG file).
 
 **Goal:** find relevant URLs for every aspect of the user's request, to pass to `smart-extract.mjs` for content extraction.
 
-Docker container on `localhost:8080`. Always the first choice for any search.
+Docker container on `localhost:8080` (override with `SEARXNG_URL`). Always the first choice for any search.
 
 **Commands:**
 
@@ -69,6 +69,8 @@ exec node <skill_dir>/scripts/searxng/searxng.mjs health
 ```
 
 All flags are optional.
+
+**Output:** each result has `title`, `url`, `snippet`, `engine`, `category` and `publishedDate` (null if the engine gives no date). Extra fields appear only when present: `engines` (several engines agree, a good sign), `img_src` for images (the real image URL; `url` is the page), `length`/`iframe_src`/`thumbnail` for videos. At the top level you may also get `suggestions` and `corrections` (rephrase the query), `answers`/`infoboxes` (direct answers) and **`unresponsive_engines`**: engines that failed (CAPTCHA, access denied, timeout). When it lists major engines the results are partial: retry later, or restrict with `--engines` to ones that answer.
 By default, SearXNG searches **all enabled engines**.  
 Use `--engines` only when you need to restrict to specific engines, e.g. `--engines google,wikipedia`.
 
@@ -155,7 +157,7 @@ exec node <skill_dir>/scripts/smart-extract.mjs --fallback "https://url1" "https
 
 `--fallback` skips Camofox and uses Cloak directly, since the goal is to recover content where Camofox has already proven insufficient.
 
-**Output:** JSON on stdout with `version`, `mode`, `results[]` (one entry per URL with `ok`, `content`, `chars`, `source`, `steps`).
+**Output:** JSON on stdout with `version`, `mode`, `results[]` (one entry per URL with `ok`, `content`, `chars`, `source`, `steps`; on Camofox results also `httpStatus`, plus a `warning` when it is 400 or higher — the content may be an error page or a challenge, so check it before trusting it).
 
 After reviewing the output, decide: **do you have enough information to answer the user's request exhaustively?** If yes, proceed. If not, go back to SearXNG with new search queries to fill the gaps.
 

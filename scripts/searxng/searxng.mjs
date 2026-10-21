@@ -2,7 +2,10 @@
 
 import { execSync } from "node:child_process";
 
-const SEARXNG_BASE = "http://localhost:8080";
+const SEARXNG_BASE = (process.env.SEARXNG_URL || "http://127.0.0.1:8080")
+  .replace(/\/+$/, "")
+  .replace(/\/search$/, "");
+const TIMEOUT_MS = Number(process.env.SEARXNG_TIMEOUT_MS) || 30000;
 const subcommand = process.argv[2];
 
 function usage() {
@@ -22,7 +25,9 @@ Flags per "search":
   --engines <csv>            Restringe a motori specifici (default: tutti gli abilitati)
   --page <n>                 Numero pagina (default: 1)
 
-Variabile d'ambiente:
+Variabili d'ambiente:
+  SEARXNG_URL <url>          Indirizzo di SearXNG (default: http://127.0.0.1:8080)
+  SEARXNG_TIMEOUT_MS <ms>    Timeout di ogni richiesta (default: 30000)
   SEARXNG_QUERY_DELAY <ms>   Attesa tra query consecutive in modalita multi-query
                              (default: 3000, 0 per disattivare)
 
@@ -122,24 +127,46 @@ async function searchOne(query, flags) {
 
   const url = `${SEARXNG_BASE}/search?${params.toString()}`;
 
+  const get = () => fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+  const isTimeout = (e) => e?.name === "TimeoutError" || e?.name === "AbortError";
+
   let res;
   try {
-    res = await fetch(url);
+    res = await get();
   } catch (err) {
+    if (isTimeout(err)) fail(`SearXNG timeout after ${TIMEOUT_MS}ms`);
     if (!(await tryRecover())) {
       fail(`Connection to SearXNG failed: ${err.message}`);
     }
     try {
-      res = await fetch(url);
+      res = await get();
     } catch (err2) {
-      fail(`Connection to SearXNG failed after restart: ${err2.message}`);
+      fail(
+        isTimeout(err2)
+          ? `SearXNG timeout after ${TIMEOUT_MS}ms`
+          : `Connection to SearXNG failed after restart: ${err2.message}`
+      );
     }
   }
   if (!res.ok) {
-    fail(`SearXNG returned HTTP ${res.status}`, await res.text().catch(() => null));
+    const hint =
+      res.status === 403
+        ? " — JSON output is probably disabled: add `json` to `search.formats` in SearXNG settings.yml (see README)"
+        : "";
+    const body = await res.text().catch(() => null);
+    fail(`SearXNG returned HTTP ${res.status}${hint}`, body && body.slice(0, 500));
   }
-  const data = await res.json();
-  return {
+  let data;
+  try {
+    data = await res.json();
+  } catch (err) {
+    fail(
+      isTimeout(err)
+        ? `SearXNG timeout after ${TIMEOUT_MS}ms`
+        : `SearXNG returned invalid JSON: ${err.message}`
+    );
+  }
+  const out = {
     query: data.query || query,
     parameters: {
       lang: flags.lang || null,
@@ -149,15 +176,54 @@ async function searchOne(query, flags) {
       page: flags.page || 1,
     },
     result_count: (data.results || []).length,
-    results: (data.results || []).map((r) => ({
-      title: r.title,
-      url: r.url,
-      snippet: r.content,
-      engine: r.engine,
-      category: r.category,
-      publishedDate: r.publishedDate || null,
-    })),
+    results: (data.results || []).map(mapResult),
   };
+
+  const unresponsive = (data.unresponsive_engines || []).map(([engine, reason]) => ({
+    engine,
+    reason,
+  }));
+  if (unresponsive.length) out.unresponsive_engines = unresponsive;
+  if (data.suggestions?.length) out.suggestions = data.suggestions;
+  if (data.corrections?.length) out.corrections = data.corrections;
+  const answers = (data.answers || [])
+    .map((a) => (typeof a === "string" ? { answer: a } : { answer: a.answer, url: a.url }))
+    .filter((a) => a.answer);
+  if (answers.length) out.answers = answers;
+  const infoboxes = (data.infoboxes || []).map((b) => ({
+    infobox: b.infobox,
+    content: b.content ? String(b.content).slice(0, 500) : undefined,
+    url: b.id || b.urls?.[0]?.url,
+  }));
+  if (infoboxes.length) out.infoboxes = infoboxes;
+  return out;
+}
+
+// Keeps the original keys and adds the ones SearXNG fills per result type.
+// Empty values are skipped so the output stays compact.
+function mapResult(r) {
+  const out = {
+    title: r.title,
+    url: r.url,
+    snippet: r.content,
+    engine: r.engine,
+    category: r.category,
+    publishedDate: r.publishedDate || r.pubdate || null,
+  };
+  const extra = {
+    engines: r.engines?.length > 1 ? r.engines : undefined,
+    img_src: r.img_src,
+    thumbnail_src: r.thumbnail_src,
+    resolution: r.resolution,
+    thumbnail: r.thumbnail,
+    length: r.length,
+    iframe_src: r.iframe_src,
+    author: r.author,
+  };
+  for (const [k, v] of Object.entries(extra)) {
+    if (v !== undefined && v !== null && v !== "") out[k] = v;
+  }
+  return out;
 }
 
 async function cmdSearch() {
@@ -193,6 +259,11 @@ async function cmdSearch() {
 }
 
 async function tryRecover() {
+  // With a custom SEARXNG_URL we cannot tell which container serves it: don't restart anything.
+  if (process.env.SEARXNG_URL) {
+    process.stderr.write("[recovery] skipped: SEARXNG_URL is set, restart the service manually\n");
+    return false;
+  }
   let ids = [];
   try {
     const out = execSync("docker ps -aq", {
@@ -207,7 +278,7 @@ async function tryRecover() {
   let target = null;
   for (const id of ids) {
     try {
-      const cfg = execSync(`docker inspect ${id} --format '{{json .Config.ExposedPorts}}'`, {
+      const cfg = execSync(`docker inspect ${id} --format "{{json .Config.ExposedPorts}}"`, {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       });
@@ -234,7 +305,9 @@ async function tryRecover() {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(`${SEARXNG_BASE}/search?format=json&q=health`);
+      const res = await fetch(`${SEARXNG_BASE}/search?format=json&q=health`, {
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
       if (res.ok) {
         process.stderr.write("[recovery] SearXNG is back up\n");
         return true;
@@ -249,7 +322,7 @@ async function tryRecover() {
 async function cmdHealth() {
   try {
     const url = `${SEARXNG_BASE}/search?format=json&q=health`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
     const out = { ok: true, status: res.status };
     process.stdout.write(JSON.stringify(out, null, 2) + "\n");
   } catch (err) {
