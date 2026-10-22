@@ -357,9 +357,20 @@ function httpStatusOf(data) {
   return typeof v === 'number' ? v : null;
 }
 
+// Camofox bloccato e riavvio di camofox.mjs non riuscito (errore "camofox_stuck"): inutile
+// insistere sugli URL successivi, si segnano falliti subito e l'escalation a Cloak fa il resto.
+let camofoxStuck = false;
+
 async function processUrlCamofox(url, opts) {
+  if (camofoxStuck) {
+    return { url, ok: false, content: null, chars: 0, reason: 'Camofox bloccato (riavvio non riuscito), URL saltato', steps: [{ tool: 'camofox', ok: false, motivo: 'saltato: Camofox bloccato' }], elapsedMs: 0 };
+  }
   const ctx = { httpStatus: null };
   const r = await processUrlCamofoxCore(url, opts, ctx);
+  if (!r.ok && /camofox_stuck/.test(JSON.stringify(r.steps || []))) {
+    camofoxStuck = true;
+    log('Camofox bloccato e riavvio non riuscito, salto Camofox per gli URL restanti');
+  }
   if (ctx.httpStatus !== null) {
     r.httpStatus = ctx.httpStatus;
     if (ctx.httpStatus >= 400) {
@@ -510,11 +521,15 @@ async function processUrlCloak(url, opts) {
   return { url, ok: false, content: s.data?.content || null, chars: s.data?.content?.length || 0, title: s.data?.title || null, reason: s.motivo || 'Cloak fallito', steps, elapsedMs: Date.now() - urlStart };
 }
 
+// Risultati gia' ottenuti: se lo script viene interrotto (timeout esterno) si stampano comunque.
+const partialResults = [];
+
 async function processUrls(urls, processor, opts) {
   const results = [];
   for (const url of urls) {
     const r = await processor(url, opts);
     results.push(r);
+    if (r.ok) partialResults.push(r);
   }
   return results;
 }
@@ -533,6 +548,9 @@ function setupSignalHandlers() {
   const cleanup = () => {
     for (const child of activeChildren) {
       try { child.kill('SIGTERM'); } catch {}
+    }
+    if (partialResults.length) {
+      output({ ok: true, mode: 'partial', interrupted: true, results: partialResults, elapsedMs: Date.now() - _overallStart });
     }
     process.exit(130);
   };

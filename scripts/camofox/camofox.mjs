@@ -195,10 +195,47 @@ async function ensureBrowser({ forceVerify = false } = {}) {
   throw new Error("Browser non operativo dopo " + BACKOFFS.length + " tentativi di smoke test");
 }
 
+// Dopo un destroy_session il server puo' restare bloccato: ogni POST /tabs finisce in
+// "tab create timed out" (500) mentre /health continua a dire ok. Serve fermare il browser.
+// Il server nasconde il motivo nel corpo del 500 ("Internal server error"): si riconosce dal solo 500 su POST /tabs.
+// Lo stesso 500 arriva pero' anche per un URL morto o lento: per questo serve isBrowserStuck().
+function isStuckTabError(err) {
+  return err?.status === 500 && /^POST \/tabs /.test(err.message || "");
+}
+
+// Sonda: se una tab su una pagina banale si apre, il browser e' sano e il problema e' l'URL.
+async function isBrowserStuck() {
+  try {
+    const tab = await client.createTab("http://example.com", { timeoutMs: 8000 });
+    try { await client.closeTab(tab.tabId); } catch {}
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+// Se il riavvio non riesce l'errore porta il marcatore "camofox_stuck": smart-extract salta Camofox per gli URL restanti.
+async function recoverStuckBrowser() {
+  client.logStep("Creazione tab bloccata, fermo il browser e lo riavvio...");
+  try {
+    try {
+      await client.stop();
+    } catch (err) {
+      client.logStep(`stop fallito (${err.message.slice(0, 80)}), provo docker restart...`);
+      try { execSync("docker restart camofox-browser", { stdio: "pipe" }); } catch {}
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+    await ensureBrowser({ forceVerify: true });
+  } catch (err) {
+    throw Object.assign(new Error(`camofox_stuck: ${err.message}`), { status: 500 });
+  }
+}
+
 async function withRecoverableTab(url, fn, { waitMs = 0, maxRetries = 1 } = {}) {
   let tab;
   let retried = false;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+  let recovered = false;
+  for (let attempt = 0; attempt <= maxRetries + 1; attempt++) {
     try {
       tab = await createTrackedTab(url);
       break;
@@ -207,6 +244,11 @@ async function withRecoverableTab(url, fn, { waitMs = 0, maxRetries = 1 } = {}) 
         client.logStep(`withRecoverableTab: 503 su createTab (${err.message.slice(0,80)}), retry con forceVerify...`);
         retried = true;
         await ensureBrowser({ forceVerify: true });
+        continue;
+      }
+      if (isStuckTabError(err) && !recovered && await isBrowserStuck()) {
+        recovered = true;
+        await recoverStuckBrowser();
         continue;
       }
       throw err;
@@ -394,7 +436,8 @@ async function cmdTab(sub, args) {
       await ensureBrowser();
       let tab;
       let retried = false;
-      for (let attempt = 0; attempt <= 1; attempt++) {
+      let recovered = false;
+      for (let attempt = 0; attempt <= 2; attempt++) {
         try {
           tab = await createTrackedTab(url);
           break;
@@ -403,6 +446,11 @@ async function cmdTab(sub, args) {
             client.logStep(`tab open: 503 su createTab, retry con forceVerify...`);
             retried = true;
             await ensureBrowser({ forceVerify: true });
+            continue;
+          }
+          if (isStuckTabError(err) && !recovered && await isBrowserStuck()) {
+            recovered = true;
+            await recoverStuckBrowser();
             continue;
           }
           throw err;
