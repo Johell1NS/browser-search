@@ -15,7 +15,7 @@ function logStep(msg) {
   process.stderr.write(`[camofox-client] ${msg}\n`);
 }
 
-async function request(method, path, { body, headers: extraHeaders = {}, rawOutput } = {}) {
+async function request(method, path, { body, headers: extraHeaders = {}, rawOutput, timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
   const url = `${BASE_URL}${path}`;
   const urlObj = new URL(url);
 
@@ -46,7 +46,7 @@ async function request(method, path, { body, headers: extraHeaders = {}, rawOutp
     headers["x-admin-key"] = ADMIN_KEY;
   }
 
-  const opts = { method, headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) };
+  const opts = { method, headers, signal: AbortSignal.timeout(timeoutMs) };
   if (body && method !== "GET") {
     opts.body = JSON.stringify(body);
   }
@@ -89,9 +89,10 @@ async function stop() {
   return request("POST", "/stop", { body: {} });
 }
 
-async function createTab(url) {
+async function createTab(url, { timeoutMs } = {}) {
   return request("POST", "/tabs", {
     body: { userId: USER_ID, sessionKey: SESSION_KEY, url },
+    ...(timeoutMs ? { timeoutMs } : {}),
   });
 }
 

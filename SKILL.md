@@ -159,6 +159,8 @@ exec node <skill_dir>/scripts/smart-extract.mjs --fallback "https://url1" "https
 
 **Output:** JSON on stdout with `version`, `mode`, `results[]` (one entry per URL with `ok`, `content`, `chars`, `source`, `steps`; on Camofox results also `httpStatus`, plus a `warning` when it is 400 or higher — the content may be an error page or a challenge, so check it before trusting it).
 
+If `smart-extract.mjs` times out or returns `mode: "partial"` (interrupted, only the URLs already extracted are printed), run `node <skill_dir>/scripts/camofox/camofox.mjs health` before retrying, and re-run only the missing URLs, one or two at a time (with `--fallback` if Camofox keeps failing).
+
 After reviewing the output, decide: **do you have enough information to answer the user's request exhaustively?** If yes, proceed. If not, go back to SearXNG with new search queries to fill the gaps.
 
 ---
